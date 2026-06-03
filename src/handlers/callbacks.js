@@ -153,14 +153,56 @@ module.exports = (bot) => {
         }
 
         if (data === "menu_avtouser") {
+            await safeEdit(chatId, messageId, "👥 **Avto User**\n\nQaysi usulda user yig'moqchisiz?", {
+                parse_mode: "Markdown",
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "👥 Faol azolarni yig'ish", callback_data: "avtouser_active" }],
+                        [{ text: "🏷 Mention azolarni yig'ish", callback_data: "avtouser_mention" }],
+                        [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                    ]
+                }
+            });
+            return await safeAnswer();
+        }
+
+        if (data === "avtouser_active" || data === "avtouser_mention") {
             const { getAvtoUserGroupPickerKeyboard } = require('../utils/helpers');
-            global.userStates[chatId] = { step: 'WAITING_SCRAPE_LINK' };
+            const type = data === "avtouser_active" ? "active" : "mention";
+            global.userStates[chatId] = { step: 'WAITING_AVTOUSER_GROUP', type };
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
             await bot.sendMessage(
                 chatId,
                 "🔗 **Guruh linkini yuboring yoki tanlang.**",
                 { parse_mode: "Markdown", reply_markup: getAvtoUserGroupPickerKeyboard() }
             );
             return await safeAnswer();
+        }
+
+        if (data.startsWith("avtouser_limit_")) {
+            const state = global.userStates[chatId];
+            if (!state || state.step !== 'WAITING_AVTOUSER_LIMIT') {
+                return await safeAnswer({ text: "Sessiya muddati tugagan.", show_alert: true });
+            }
+            const historyLimit = parseInt(data.split('_')[2], 10);
+            delete global.userStates[chatId];
+            await safeAnswer({ text: "⏳ Userlarni yig'ish boshlandi..." });
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+            
+            const { scrapeUsers, scrapeMentionUsers } = require('../services/userbot');
+            
+            bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlandi...**\nBiroz vaqt olishi mumkin **Iltimos** sabrli bo'ling.");
+            
+            if (state.type === 'active') {
+                scrapeUsers(chatId, state.groupLink, 2000, bot).catch(err => {
+                    bot.sendMessage(chatId, `❌ Xatolik: ${err.message}`);
+                });
+            } else {
+                scrapeMentionUsers(chatId, state.groupLink, historyLimit, bot).catch(err => {
+                    bot.sendMessage(chatId, `❌ Xatolik: ${err.message}`);
+                });
+            }
+            return;
         }
 
         if (data === "menu_reyd") {

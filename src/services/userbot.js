@@ -930,6 +930,158 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
     }
 };
 
+const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot) => {
+    const client = await ensureClient(chatId, bot);
+    const me = await client.getMe();
+    const myId = me.id;
+    
+    try {
+        let entity;
+        const rawLink = String(groupLink).trim();
+        // 1. Guruhga ulanish (link, @username yoki chat_shared ID)
+        if (/^-?\d+$/.test(rawLink)) {
+            entity = await client.getEntity(BigInt(rawLink));
+        } else if (rawLink.includes("t.me/+") || rawLink.includes("joinchat/")) {
+            const hash = rawLink.split('/').pop().replace('+', '');
+            try {
+                const result = await client.invoke(new Api.messages.ImportChatInvite({ hash }));
+                entity = result.chats ? result.chats[0] : result.chat;
+            } catch (err) {
+                if (err.message.includes("USER_ALREADY_PARTICIPANT")) {
+                    const check = await client.invoke(new Api.messages.CheckChatInvite({ hash }));
+                    entity = check.chat;
+                } else { throw err; }
+            }
+        } else {
+            try {
+                entity = await client.getEntity(rawLink);
+                await client.invoke(new Api.channels.JoinChannel({ channel: entity }));
+            } catch (err) {
+                if (!err.message.includes("USER_ALREADY_PARTICIPANT")) {
+                    entity = await client.getEntity(rawLink);
+                }
+            }
+        }
+
+        if (!entity) throw new Error("Guruh topilmadi.");
+
+        const statusMsg = await bot.sendMessage(chatId, "⏳ **Mention azolarni yig'ish boshlandi...**\nIltimos, jarayon tugashini kuting.", { parse_mode: "Markdown" });
+
+        const gatheredUserIds = new Set();
+        const members = [];
+        let memberCount = 0; // A'zolar soni
+        let memberParts = 1; // A'zolar qismlari soni
+        let scannedMessages = 0;
+
+        // Tarixdan barcha xabarlarni o'qish va mention qilingan userlarni yig'ish
+        try {
+            for await (const message of client.iterMessages(entity, { limit: historyLimit })) {
+                scannedMessages++;
+
+                // Entitiesni tekshirish (mention, text_mention)
+                if (message.entities && Array.isArray(message.entities)) {
+                    for (const ent of message.entities) {
+                        if (ent instanceof Api.MessageEntityMention) {
+                            // @username uslubidagi mention
+                            const offset = ent.offset;
+                            const length = ent.length;
+                            const mentionText = message.text?.substring(offset, offset + length);
+                            if (mentionText && mentionText.startsWith('@')) {
+                                const username = mentionText.substring(1);
+                                if (username && !gatheredUserIds.has(username.toLowerCase())) {
+                                    members.push({ id: username.toLowerCase(), username: username });
+                                    gatheredUserIds.add(username.toLowerCase());
+                                    memberCount++;
+
+                                    // Har 200 ta yig'ilganda darhol yuborish
+                                    if (members.length >= 200) {
+                                        // Alfavit bo'yicha saralash
+                                        members.sort((a, b) => a.username.localeCompare(b.username));
+                                        let text = `🏷 **Mention azolar:** ( ${memberCount} ta, ${memberParts} qism )\n\n`;
+                                        text += members.map(m => `@${m.username}`).join("\n");
+                                        await bot.sendMessage(chatId, text).catch(e => console.error("Batch send error:", e.message));
+                                        members.length = 0; // Massivni tozalash
+                                        memberParts++; // Qism sonini oshirish
+                                        await new Promise(r => setTimeout(r, 2000)); // Flood protection
+                                    }
+                                }
+                            }
+                        } else if (ent instanceof Api.MessageEntityMentionName) {
+                            // User ID orqali mention (text_mention)
+                            if (ent.userId) {
+                                try {
+                                    const user = await client.getEntity(ent.userId);
+                                    if (user && user instanceof Api.User && !user.bot && user.username && !user.deleted && user.id.toString() !== myId.toString()) {
+                                        const userIdStr = user.id.toString();
+                                        if (!gatheredUserIds.has(userIdStr)) {
+                                            members.push({ id: userIdStr, username: user.username });
+                                            gatheredUserIds.add(userIdStr);
+                                            memberCount++;
+
+                                            // Har 200 ta yig'ilganda darhol yuborish
+                                            if (members.length >= 200) {
+                                                // Alfavit bo'yicha saralash
+                                                members.sort((a, b) => a.username.localeCompare(b.username));
+                                                let text = `🏷 **Mention azolar:** ( ${memberCount} ta, ${memberParts} qism )\n\n`;
+                                                text += members.map(m => `@${m.username}`).join("\n");
+                                                await bot.sendMessage(chatId, text).catch(e => console.error("Batch send error:", e.message));
+                                                members.length = 0; // Massivni tozalash
+                                                memberParts++; // Qism sonini oshirish
+                                                await new Promise(r => setTimeout(r, 2000)); // Flood protection
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    // Foydalanuvchi topilmasa, skip qilamiz
+                                    console.error("User fetch error:", e.message);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Har 500 ta xabardan keyin kichik tanaffus (Flood protection)
+                if (scannedMessages % 500 === 0) {
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+        } catch (e) {
+            console.error("History scan xatosi:", e.message);
+        }
+
+        // 5. Yakuniy natija
+        const summaryText = `🏁 **NATIJA:**\n\n` +
+            `🏷 **Mention azolar:** ${memberCount} ta, ${memberParts} qism\n` +
+            `📊 **Jami:** ${gatheredUserIds.size} ta`;
+        
+        await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+        
+        // Qolgan a'zolarni yuborish (agar 200 taga yetmagan bo'lsa)
+        if (members.length > 0) {
+            // Alfavit bo'yicha saralash
+            members.sort((a, b) => a.username.localeCompare(b.username));
+            let text = `🏷 **Mention azolar:** ( ${memberCount} ta, ${memberParts} qism )\n\n`;
+            text += members.map(m => `@${m.username}`).join("\n");
+            await bot.sendMessage(chatId, text).catch(e => console.error("Final batch send error:", e.message));
+            memberParts++; // Qism sonini oshirish
+        }
+
+        // 3. Yakuniy xulosa va menyu
+        await bot.sendMessage(chatId, summaryText, { 
+            parse_mode: "Markdown",
+            ...getMainMenu(chatId)
+        });
+
+        // Bazani yangilash
+        await User.increment({ usersGathered: gatheredUserIds.size }, { where: { chatId } });
+
+        return true;
+    } catch (error) { 
+        console.error("Scrape mention error:", error);
+        throw error; 
+    }
+};
+
 const reydSessions = {}; // { chatId: { status: 'running'|'stopped' } }
 
 const ensureClient = async (chatId, bot) => {
@@ -1724,5 +1876,5 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
 
 module.exports = { 
     userClients, avtoAlmazStates, utagStates, reklamaStates, reydSessions, startUserbot, blockExpiredUser,
-    initAuth, handleAuthStep, resendAuthCode, scrapeUsers, startReyd, startReklama, startAutoTag, loadAllStates
+    initAuth, handleAuthStep, resendAuthCode, scrapeUsers, scrapeMentionUsers, startReyd, startReklama, startAutoTag, loadAllStates
 };

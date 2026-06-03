@@ -159,6 +159,48 @@ module.exports = (bot) => {
         }
 
         // Features logic
+        if (state.step === 'WAITING_AVTOUSER_GROUP') {
+            if (msg.chat_shared && msg.chat_shared.request_id === SCRAPE_CHAT_REQUEST_ID) {
+                const { id: groupId, title } = parseSharedGroup(msg.chat_shared);
+                global.userStates[chatId] = { step: 'WAITING_AVTOUSER_LIMIT', type: state.type, groupLink: groupId, groupTitle: title };
+                await bot.sendMessage(
+                    chatId,
+                    `✅ **${title}** tanlandi.\n\n🔢 Qancha xabar tarixi o'qilsin?`,
+                    { 
+                        parse_mode: "Markdown", 
+                        ...removeKeyboardMarkup(),
+                        reply_markup: {
+                            inline_keyboard: [
+                                [{ text: "1 000 000 xabar", callback_data: "avtouser_limit_1000000" }],
+                                [{ text: "2 000 000 xabar", callback_data: "avtouser_limit_2000000" }],
+                                [{ text: "3 000 000 xabar", callback_data: "avtouser_limit_3000000" }]
+                            ]
+                        }
+                    }
+                );
+                return;
+            }
+
+            if (!text) return;
+            global.userStates[chatId] = { step: 'WAITING_AVTOUSER_LIMIT', type: state.type, groupLink: text.trim() };
+            await bot.sendMessage(
+                chatId,
+                "🔢 Qancha xabar tarixi o'qilsin?",
+                { 
+                    parse_mode: "Markdown", 
+                    ...removeKeyboardMarkup(),
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: "1 000 000 xabar", callback_data: "avtouser_limit_1000000" }],
+                            [{ text: "2 000 000 xabar", callback_data: "avtouser_limit_2000000" }],
+                            [{ text: "3 000 000 xabar", callback_data: "avtouser_limit_3000000" }]
+                        ]
+                    }
+                }
+            );
+            return;
+        }
+
         if (state.step === 'WAITING_SCRAPE_LINK') {
             if (msg.chat_shared && msg.chat_shared.request_id === SCRAPE_CHAT_REQUEST_ID) {
                 const { id: groupId, title } = parseSharedGroup(msg.chat_shared);
