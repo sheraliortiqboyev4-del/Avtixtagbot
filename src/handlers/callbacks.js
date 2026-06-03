@@ -54,6 +54,13 @@ module.exports = (bot) => {
             return;
         }
 
+        // --- 0. SCRAPE SESSION CHECK ---
+        const { scrapeSessions } = require('../services/userbot');
+        if (scrapeSessions[chatId] && data !== "scrape_stop") {
+            await safeAnswer({ text: "⏳ Foydalanuvchilarni yig'ish jarayoni davom etmoqda! Tugaguncha kuting yoki \"To'xtatish\" tugmasini bosing.", show_alert: true });
+            return;
+        }
+        
         // --- 1. SESSION CHECK ---
         const user = await findUserByChatId(chatId);
         const allowedCallbacks = [

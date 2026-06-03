@@ -1045,11 +1045,13 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
             memberParts++; // Qism sonini oshirish
         }
 
-        // 3. Yakuniy xulosa va menyu
+        // 3. Yakuniy xulosa (ALOIDA)
         await bot.sendMessage(chatId, summaryText, { 
-            parse_mode: "Markdown",
-            ...getMainMenu(chatId)
+            parse_mode: "Markdown"
         });
+        
+        // 4. Asosiy menyu (ALOIDA)
+        await bot.sendMessage(chatId, "📊 **Asosiy menyu:**", getMainMenu(chatId));
 
         // Bazani yangilash
         await User.increment({ usersGathered: gatheredUserIds.size }, { where: { chatId } });
@@ -1272,11 +1274,13 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
             memberParts++; // Qism sonini oshirish
         }
 
-        // 3. Yakuniy xulosa va menyu
+        // 3. Yakuniy xulosa (ALOIDA)
         await bot.sendMessage(chatId, summaryText, { 
-            parse_mode: "Markdown",
-            ...getMainMenu(chatId)
+            parse_mode: "Markdown"
         });
+        
+        // 4. Asosiy menyu (ALOIDA)
+        await bot.sendMessage(chatId, "📊 **Asosiy menyu:**", getMainMenu(chatId));
 
         // Bazani yangilash
         await User.increment({ usersGathered: gatheredUserIds.size }, { where: { chatId } });
