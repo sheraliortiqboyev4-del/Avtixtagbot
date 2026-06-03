@@ -179,6 +179,17 @@ module.exports = (bot) => {
             return await safeAnswer();
         }
 
+        if (data === "scrape_stop") {
+            const { scrapeSessions } = require('../services/userbot');
+            if (scrapeSessions[chatId]) {
+                scrapeSessions[chatId].status = 'stopped';
+                await safeAnswer({ text: "⏹ To'xtatilmoqda..." });
+            } else {
+                await safeAnswer({ text: "❌ Faol jarayon topilmadi.", show_alert: true });
+            }
+            return;
+        }
+        
         if (data.startsWith("avtouser_limit_")) {
             const state = global.userStates[chatId];
             if (!state || state.step !== 'WAITING_AVTOUSER_LIMIT') {
@@ -191,7 +202,7 @@ module.exports = (bot) => {
             
             const { scrapeUsers, scrapeMentionUsers } = require('../services/userbot');
             
-            bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlandi...**\nBiroz vaqt olishi mumkin **Iltimos** sabrli bo'ling.");
+            // Don't send another message, scrapeUsers already sends one
             
             if (state.type === 'active') {
                 scrapeUsers(chatId, state.groupLink, 2000, bot).catch(err => {
