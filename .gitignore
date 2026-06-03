@@ -1,0 +1,9 @@
+node_modules/
+.env
+logs/
+temp/
+*.log
+ecosystem.config.js
+database.sqlite
+*.sqlite
+*.sqlite-journal
