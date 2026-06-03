@@ -1009,18 +1009,30 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
             `👥 **A'zolar:** ${memberCount} ta, ${memberParts} qism\n` +
             `📊 **Jami:** ${gatheredUserIds.size} ta`;
         
-        // Unpin and delete status message (if exists and session isn't already cleaned)
+        // Save status message reference FIRST before deleting session
         const session = scrapeSessions[chatId];
         const statusMessageObj = session?.statusMsg || statusMsg;
         
+        // Try to edit status message to show it's finished
         if (statusMessageObj && statusMessageObj.message_id) {
-            await bot.unpinChatMessage({ chat_id: chatId, message_id: statusMessageObj.message_id }).catch(err => console.error("Unpin error:", err.message));
             try {
-                await bot.deleteMessage({ chat_id: chatId, message_id: statusMessageObj.message_id }).catch(() => {});
-            } catch (e) {}
+                await bot.editMessageText("✅ Jarayon tugadi!", {
+                    chat_id: chatId,
+                    message_id: statusMessageObj.message_id,
+                    parse_mode: "Markdown"
+                });
+            } catch (e) {
+                // Ignore edit errors
+            }
+            
+            // Unpin the message
+            await bot.unpinChatMessage({ chat_id: chatId, message_id: statusMessageObj.message_id }).catch(err => console.error("Unpin error:", err.message));
+            
+            // Delete the status message
+            await bot.deleteMessage({ chat_id: chatId, message_id: statusMessageObj.message_id }).catch(() => {});
         }
         
-        // Cleanup session
+        // Cleanup session LAST
         if (scrapeSessions[chatId]) {
             delete scrapeSessions[chatId];
         }
@@ -1224,18 +1236,28 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
             `🏷 **Mention azolar:** ${memberCount} ta, ${memberParts} qism\n` +
             `📊 **Jami:** ${gatheredUserIds.size} ta`;
         
-        // Unpin and delete status message (if exists)
+        // Save status message reference FIRST
         const mentionSession = scrapeSessions[chatId];
         const mentionStatusMsgObj = mentionSession?.statusMsg || statusMsg;
         
         if (mentionStatusMsgObj && mentionStatusMsgObj.message_id) {
-            await bot.unpinChatMessage({ chat_id: chatId, message_id: mentionStatusMsgObj.message_id }).catch(err => console.error("Unpin error:", err.message));
+            // Edit status first
             try {
-                await bot.deleteMessage({ chat_id: chatId, message_id: mentionStatusMsgObj.message_id }).catch(() => {});
+                await bot.editMessageText("✅ Jarayon tugadi!", {
+                    chat_id: chatId,
+                    message_id: mentionStatusMsgObj.message_id,
+                    parse_mode: "Markdown"
+                });
             } catch (e) {}
+            
+            // Unpin
+            await bot.unpinChatMessage({ chat_id: chatId, message_id: mentionStatusMsgObj.message_id }).catch(err => console.error("Unpin error:", err.message));
+            
+            // Delete
+            await bot.deleteMessage({ chat_id: chatId, message_id: mentionStatusMsgObj.message_id }).catch(() => {});
         }
         
-        // Cleanup session
+        // Cleanup session LAST
         if (scrapeSessions[chatId]) {
             delete scrapeSessions[chatId];
         }
