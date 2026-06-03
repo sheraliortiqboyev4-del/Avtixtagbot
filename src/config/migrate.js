@@ -15,7 +15,7 @@ const migrateSchema = async () => {
     const { loadModels } = require('./db');
     loadModels();
     const { sequelize } = require('./db');
-    await sequelize.sync();
+    await sequelize.sync({ alter: true }); // This will add new columns to existing tables!
     await migrateChannelUrls();
 };
 

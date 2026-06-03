@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const User = require('../models/User');
 const { blockExpiredUser } = require('./userbot');
 const { triggerBackup } = require('../utils/dbBackup');
+const { withMigrationRetry } = require('../config/migrate');
 
 /** Muddat o'tgan, lekin hali approved bo'lganlar (zaxiradan tiklanganda ham) */
 const findExpiredApprovedUsers = async () => {
@@ -24,7 +25,7 @@ const findExpiredApprovedUsers = async () => {
 const runExpirySweep = async (bot, options = {}) => {
     const { reason = 'periodic', backupOnChange = true } = options;
 
-    const expired = await findExpiredApprovedUsers();
+    const expired = await withMigrationRetry(findExpiredApprovedUsers);
     if (!expired.length) return 0;
 
     const now = new Date();
