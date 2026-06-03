@@ -1009,11 +1009,14 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
             `👥 **A'zolar:** ${memberCount} ta, ${memberParts} qism\n` +
             `📊 **Jami:** ${gatheredUserIds.size} ta`;
         
-        // Unpin the status message
-        if (statusMsg) {
-            await bot.unpinChatMessage(chatId, statusMsg.message_id).catch(err => console.error("Unpin error:", err.message));
+        // Unpin and delete status message (if exists and session isn't already cleaned)
+        const session = scrapeSessions[chatId];
+        const statusMessageObj = session?.statusMsg || statusMsg;
+        
+        if (statusMessageObj && statusMessageObj.message_id) {
+            await bot.unpinChatMessage({ chat_id: chatId, message_id: statusMessageObj.message_id }).catch(err => console.error("Unpin error:", err.message));
             try {
-                await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+                await bot.deleteMessage({ chat_id: chatId, message_id: statusMessageObj.message_id }).catch(() => {});
             } catch (e) {}
         }
         
@@ -1221,11 +1224,14 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
             `🏷 **Mention azolar:** ${memberCount} ta, ${memberParts} qism\n` +
             `📊 **Jami:** ${gatheredUserIds.size} ta`;
         
-        // Unpin the status message
-        if (statusMsg) {
-            await bot.unpinChatMessage(chatId, statusMsg.message_id).catch(err => console.error("Unpin error:", err.message));
+        // Unpin and delete status message (if exists)
+        const mentionSession = scrapeSessions[chatId];
+        const mentionStatusMsgObj = mentionSession?.statusMsg || statusMsg;
+        
+        if (mentionStatusMsgObj && mentionStatusMsgObj.message_id) {
+            await bot.unpinChatMessage({ chat_id: chatId, message_id: mentionStatusMsgObj.message_id }).catch(err => console.error("Unpin error:", err.message));
             try {
-                await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+                await bot.deleteMessage({ chat_id: chatId, message_id: mentionStatusMsgObj.message_id }).catch(() => {});
             } catch (e) {}
         }
         
