@@ -119,6 +119,17 @@ if (!global.authClients) global.authClients = {};
 
 const startUserbot = async (chatId, sessionStr, bot) => { 
     try { 
+        // Agar faol yig'ish sessiyasi mavjud bo'lsa, hech narsa qilmaymiz!
+        if (scrapeSessions[chatId]) {
+            console.log(`⏳ User ${chatId} uchun faol yig'ish sessiyasi mavjud, startUserbot o'tkazib yuborildi.`);
+            // Faqat avto almaz holatini yangilaymiz
+            if (avtoAlmazStates[chatId] === undefined) { 
+                const user = await getUser(chatId); 
+                avtoAlmazStates[chatId] = user && user.avtoAlmaz !== undefined ? user.avtoAlmaz : true; 
+            }
+            return;
+        }
+        
         if (userClients[chatId]) {
             try { await userClients[chatId].disconnect(); } catch (e) {}
         }
