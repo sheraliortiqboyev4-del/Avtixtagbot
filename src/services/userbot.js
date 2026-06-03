@@ -813,7 +813,10 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
 
         if (!entity) throw new Error("Guruh topilmadi.");
 
+        let floodWait = 0;
         const statusMsg = await bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlandi...**\nIltimos, jarayon tugashini kuting.", { parse_mode: "Markdown" });
+        // Pin the status message
+        await bot.pinChatMessage(chatId, statusMsg.message_id, { disable_notification: true }).catch(err => console.error("Pin error:", err.message));
 
         const gatheredUserIds = new Set();
         const members = [];
@@ -821,6 +824,30 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
         let adminParts = 1; // Adminlar qismlari soni
         let memberCount = 0; // A'zolar soni
         let memberParts = 1; // A'zolar qismlari soni
+        let scannedMessages = 0;
+
+        // Function to update status message
+        const updateStatus = async (extra = '') => {
+            let text = `⏳ **Userlarni yig'ish jarayoni...**\n\n`;
+            text += `📊 O'qilgan xabarlar: ${scannedMessages}\n`;
+            text += `👑 Adminlar: ${adminCount} ta\n`;
+            text += `👥 A'zolar: ${memberCount} ta\n`;
+            text += `📊 Jami: ${gatheredUserIds.size} ta`;
+            if (extra) {
+                text += `\n\n⚠️ ${extra}`;
+            }
+            try {
+                await bot.editMessageText(text, {
+                    chat_id: chatId,
+                    message_id: statusMsg.message_id,
+                    parse_mode: "Markdown"
+                });
+            } catch (e) {
+                if (!e.message.includes("message is not modified")) {
+                    console.error("Status update error:", e.message);
+                }
+            }
+        };
 
         // 2. Adminlarni yig'ish
         try {
@@ -835,6 +862,11 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
                     currentAdmins.push({ id: p.id.toString(), username: p.username });
                     gatheredUserIds.add(p.id.toString());
                     adminCount++; // Adminlar sonini oshirish
+                    
+                    // Update status every time we add a user
+                    if (adminCount % 10 === 0) {
+                        await updateStatus();
+                    }
                     
                     // Har 100 ta yig'ilganda yuborish
                     if (currentAdmins.length >= 100) {
@@ -859,7 +891,6 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
         }
 
         // 3. Tarixdan qidirish (History Scan) - faqat bu ishlaydi, admin huquqi yo'q bo'lsa
-        let scannedMessages = 0;
         try {
             // 2 MLN xabargacha skan qilish
             const scanLimit = 3000000;
@@ -877,6 +908,11 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
                         gatheredUserIds.add(senderIdStr);
                         memberCount++; // A'zolar sonini oshirish
 
+                        // Update status every 50 messages or when a user is added
+                        if (scannedMessages % 50 === 0 || memberCount % 10 === 0) {
+                            await updateStatus();
+                        }
+
                         // Har 100 ta yig'ilganda darhol yuborish
                         if (members.length >= 100) {
                             let text = `👥 **Azolar:** ( ${memberCount} ta, ${memberParts} qism )\n\n`;
@@ -891,11 +927,19 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
                 
                 // Har 500 ta xabardan keyin kichik tanaffus (Flood protection)
                 if (scannedMessages % 500 === 0) {
+                    await updateStatus();
                     await new Promise(r => setTimeout(r, 1500));
                 }
             }
         } catch (e) {
             console.error("History scan xatosi:", e.message);
+            if (e.message.includes("FLOOD_WAIT")) {
+                const seconds = parseInt(e.message.split("_").pop()) || 10;
+                floodWait = seconds;
+                await updateStatus(`FLOOD_WAIT: ${seconds} soniya kutilmoqda...`);
+                await new Promise(r => setTimeout(r, seconds * 1000));
+                floodWait = 0;
+            }
         }
 
         // 5. Yakuniy natija
@@ -904,7 +948,11 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
             `👥 **A'zolar:** ${memberCount} ta, ${memberParts} qism\n` +
             `📊 **Jami:** ${gatheredUserIds.size} ta`;
         
-        await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+        // Unpin the status message
+        await bot.unpinChatMessage(chatId, statusMsg.message_id).catch(err => console.error("Unpin error:", err.message));
+        try {
+            await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+        } catch (e) {}
         
         // Qolgan a'zolarni yuborish (agar 100 taga yetmagan bo'lsa)
         if (members.length > 0) {
@@ -966,12 +1014,36 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
         if (!entity) throw new Error("Guruh topilmadi.");
 
         const statusMsg = await bot.sendMessage(chatId, "⏳ **Mention azolarni yig'ish boshlandi...**\nIltimos, jarayon tugashini kuting.", { parse_mode: "Markdown" });
+        // Pin the status message
+        await bot.pinChatMessage(chatId, statusMsg.message_id, { disable_notification: true }).catch(err => console.error("Pin error:", err.message));
 
         const gatheredUserIds = new Set();
         const members = [];
         let memberCount = 0; // A'zolar soni
         let memberParts = 1; // A'zolar qismlari soni
         let scannedMessages = 0;
+        let floodWait = 0;
+
+        // Function to update status message
+        const updateStatus = async (extra = '') => {
+            let text = `⏳ **Mention azolarni yig'ish jarayoni...**\n\n`;
+            text += `📊 O'qilgan xabarlar: ${scannedMessages}/${historyLimit}\n`;
+            text += `🏷 Mention azolar: ${memberCount} ta`;
+            if (extra) {
+                text += `\n\n⚠️ ${extra}`;
+            }
+            try {
+                await bot.editMessageText(text, {
+                    chat_id: chatId,
+                    message_id: statusMsg.message_id,
+                    parse_mode: "Markdown"
+                });
+            } catch (e) {
+                if (!e.message.includes("message is not modified")) {
+                    console.error("Status update error:", e.message);
+                }
+            }
+        };
 
         // Tarixdan barcha xabarlarni o'qish va mention qilingan userlarni yig'ish
         try {
@@ -993,6 +1065,11 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
                                     gatheredUserIds.add(username.toLowerCase());
                                     memberCount++;
 
+                                    // Update status every 50 messages or when a user is added
+                                    if (scannedMessages % 50 === 0 || memberCount % 10 === 0) {
+                                        await updateStatus();
+                                    }
+
                                     // Har 200 ta yig'ilganda darhol yuborish
                                     if (members.length >= 200) {
                                         // Alfavit bo'yicha saralash
@@ -1013,11 +1090,19 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
                 
                 // Har 500 ta xabardan keyin kichik tanaffus (Flood protection)
                 if (scannedMessages % 500 === 0) {
+                    await updateStatus();
                     await new Promise(r => setTimeout(r, 1500));
                 }
             }
         } catch (e) {
             console.error("History scan xatosi:", e.message);
+            if (e.message.includes("FLOOD_WAIT")) {
+                const seconds = parseInt(e.message.split("_").pop()) || 10;
+                floodWait = seconds;
+                await updateStatus(`FLOOD_WAIT: ${seconds} soniya kutilmoqda...`);
+                await new Promise(r => setTimeout(r, seconds * 1000));
+                floodWait = 0;
+            }
         }
 
         // 5. Yakuniy natija
@@ -1025,7 +1110,11 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
             `🏷 **Mention azolar:** ${memberCount} ta, ${memberParts} qism\n` +
             `📊 **Jami:** ${gatheredUserIds.size} ta`;
         
-        await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+        // Unpin the status message
+        await bot.unpinChatMessage(chatId, statusMsg.message_id).catch(err => console.error("Unpin error:", err.message));
+        try {
+            await bot.deleteMessage(chatId, statusMsg.message_id).catch(() => {});
+        } catch (e) {}
         
         // Qolgan a'zolarni yuborish (agar 200 taga yetmagan bo'lsa)
         if (members.length > 0) {
