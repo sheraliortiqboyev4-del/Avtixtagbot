@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const User = require('../models/User');
 const Channel = require('../models/Channel');
 const config = require('../config');
@@ -19,7 +17,6 @@ const {
     getUtagModeKeyboard
 } = require('../utils/helpers');
 const { triggerBackup } = require('../utils/dbBackup');
-const { adminSetCoins, adminAdjustCoins } = require('../services/bonus');
 const { initAuth, handleAuthStep, scrapeUsers, startReyd, startReklama, startAutoTag } = require('../services/userbot');
 
 if (!global.userStates) global.userStates = {};
@@ -46,8 +43,8 @@ module.exports = (bot) => {
         // 3. Agar hech qanday holatda bo'lmasa, xabarni e'tiborsiz qoldiramiz
         if (!state) return;
 
-        // 4. Session check for features
-        if (!['WAITING_PHONE', 'WAITING_CODE', 'WAITING_PASSWORD', 'WAITING_TIME', 'WAITING_BROADCAST', 'WAITING_COIN_SET', 'WAITING_COIN_DEDUCT'].includes(state.step)) {
+        // Session check for features
+        if (!['WAITING_PHONE', 'WAITING_CODE', 'WAITING_PASSWORD', 'WAITING_TIME', 'WAITING_BROADCAST'].includes(state.step)) {
             const user = await User.findOne({ where: { chatId } });
             if (!user || !user.session) {
                 delete global.userStates[chatId];
@@ -104,7 +101,7 @@ module.exports = (bot) => {
                 if (duration === 0) return bot.sendMessage(chatId, "❌ Noto'g'ri format! Qayta kiriting."); 
                 const expireAt = new Date(Date.now() + duration); 
                 await User.update({ status: 'approved', expireAt, expiryWarningSent: false }, { where: { chatId: state.targetId } }); 
-                triggerBackup('admin_tasdiq_qolda', true);
+                triggerBackup('admin_approve', true);
                 bot.sendMessage(chatId, `✅ Tasdiqlandi! Muddat: ${text}`); 
                 bot.sendMessage(state.targetId, `🎉 Siz admin tomonidan tasdiqlandingiz! \n\n 🔰 Tarif: ${text} \n Endi /start ni bosib ro'yxatdan o'tishingiz mumkin.`); 
                 delete global.userStates[chatId]; 
@@ -121,56 +118,6 @@ module.exports = (bot) => {
                 delete global.userStates[chatId]; 
                 return;
             } 
-
-            if (state.step === 'WAITING_COIN_SET') {
-                if (!text) return;
-                const amount = parseInt(text.replace(/\s/g, ''), 10);
-                if (Number.isNaN(amount) || amount < 0) {
-                    return bot.sendMessage(chatId, "❌ 0 yoki undan katta butun son kiriting.");
-                }
-                try {
-                    const { oldCoins, newCoins } = await adminSetCoins(state.targetId, amount, chatId);
-                    bot.sendMessage(
-                        chatId,
-                        `✅ User \`${state.targetId}\`: ${oldCoins} → **${newCoins}** coin`,
-                        { parse_mode: 'Markdown', skipEmojiWrap: true }
-                    );
-                    bot.sendMessage(
-                        state.targetId,
-                        `🪙 Admin tomonidan sizga **${newCoins}** ta coin xadiya qilindi.`,
-                        { parse_mode: 'Markdown', skipEmojiWrap: true }
-                    ).catch(() => {});
-                } catch (e) {
-                    bot.sendMessage(chatId, `❌ ${e.message}`);
-                }
-                delete global.userStates[chatId];
-                return;
-            }
-
-            if (state.step === 'WAITING_COIN_DEDUCT') {
-                if (!text) return;
-                const amount = parseInt(text.replace(/\s/g, ''), 10);
-                if (Number.isNaN(amount) || amount <= 0) {
-                    return bot.sendMessage(chatId, "❌ 1 yoki undan katta butun son kiriting (masalan: 10).");
-                }
-                try {
-                    const { newCoins, delta } = await adminAdjustCoins(state.targetId, -amount, chatId);
-                    bot.sendMessage(
-                        chatId,
-                        `✅ User \`${state.targetId}\` dan **${amount}** coin yechildi.\nYangi balans: **${newCoins}** coin`,
-                        { parse_mode: 'Markdown', skipEmojiWrap: true }
-                    );
-                    // bot.sendMessage(
-                    //     state.targetId,
-                    //     `🪙 Admin hisobingizdan **${amount}** coin yechildi.\nQolgan: **${newCoins}** coin`,
-                    //     { parse_mode: 'Markdown', skipEmojiWrap: true }
-                    // ).catch(() => {});
-                } catch (e) {
-                    bot.sendMessage(chatId, `❌ ${e.message}`);
-                }
-                delete global.userStates[chatId];
-                return;
-            }
 
             if (state.step === 'WAITING_CHANNEL_ID') {
                 if (!text) return;
@@ -241,9 +188,9 @@ module.exports = (bot) => {
             
             delete global.userStates[chatId];
             
-            bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlanmoqda...**\nBiroz vaqt olishi mumkin **Iltimos** sabirli bo'ling .");
+            bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlandi...**\nBiroz vaqt olishi mumkin **Iltimos** sabrli bo'ling.");
             
-            scrapeUsers(chatId, groupLink, limit, bot).catch(e => {
+            scrapeUsers(chatId, groupLink, limit, bot).catch(err => {
                 bot.sendMessage(chatId, `❌ Xatolik: Guruh linki eskirgan bo'lishi mumkin.\nGuruha borligingizni tekshiring.`);
             });
             return;
@@ -264,8 +211,8 @@ module.exports = (bot) => {
             let stickerPath = null;
             if (msg.sticker) {
                 try {
-                    const tempDir = path.join(process.cwd(), 'temp');
-                    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+                    const tempDir = require('path').join(process.cwd(), 'temp');
+                    if (!require('fs').existsSync(tempDir)) require('fs').mkdirSync(tempDir);
                     stickerPath = await bot.downloadFile(msg.sticker.file_id, tempDir);
                 } catch (err) {
                     console.error("Stiker yuklash xatosi:", err.message);
@@ -359,7 +306,7 @@ module.exports = (bot) => {
             const utagData = { ...state };
             delete global.userStates[chatId];
 
-            bot.sendMessage(chatId, "🚀 Utag jarayoni boshlanmoqda...");
+            bot.sendMessage(chatId, "🚀 Utag jarayoni boshlandi...");
             startAutoTag(chatId, utagData.groupLink, bot, {
                 limit: utagData.limit ?? 0,
                 mode: 'custom',
@@ -371,4 +318,3 @@ module.exports = (bot) => {
         }
     });
 };
-

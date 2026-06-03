@@ -19,9 +19,6 @@ const loadModels = () => {
     require('../models/User');
     require('../models/Channel');
     require('../models/PremiumAd');
-    require('../models/BotSetting');
-    require('../models/Referral');
-    require('../models/CoinTransaction');
 };
 
 const connectDB = async () => {
@@ -31,8 +28,6 @@ const connectDB = async () => {
     const { migrateSchema } = require('./migrate');
     await migrateSchema();
     console.log('✅ Ma\'lumotlar bazasi sinxronizatsiya va migratsiya tugadi.');
-    const { ensureBonusSettingSeed } = require('../services/bonus');
-    await ensureBonusSettingSeed();
     setDbReady(true);
 };
 

@@ -24,7 +24,7 @@ const convertToGramJsEntities = (entities) => {
             case 'underline': return new Api.MessageEntityUnderline(args);
             case 'strikethrough': return new Api.MessageEntityStrike(args);
             case 'code': return new Api.MessageEntityCode(args);
-            case 'pre': return new Api.MessageEntityPre({ ...args, language: e.language || '' });
+            case 'pre': return new Api.MessageEntityPre({ ...args, language: '' });
             case 'text_link': return new Api.MessageEntityTextUrl({ ...args, url: e.url });
             case 'text_mention': return e.user ? new Api.MessageEntityMentionName({ ...args, userId: BigInt(e.user.id) }) : null;
             case 'mention': return new Api.MessageEntityMention(args);
@@ -85,7 +85,7 @@ const EMOJI_MAP = {
     '🛑': '5472030751648127392',
     '▶️': '5348125953090403204',
     '🔢': '5467370987009909520',
-    '📝': '5334882760735598374',
+    '📝': '5334890573281114250',
     '🔐': '5472308992514464048',
     '🏁': '5411520005386806155',
     '📦': '5271923685547058434',
@@ -124,7 +124,7 @@ function withPremiumEmojis(text) {
 
         entities.push({ type: "bold", offset, length });
         
-        // cleanText'ni yangilaymiz (belgilarni olib tashlaymiz)
+        // cleanText'ni yangilaymiz (belgilarini olib tashlaymiz)
         cleanText = cleanText.slice(0, offset) + innerText + cleanText.slice(offset + fullMatch.length);
         
         // Regex lastIndex'ni yangilangan matnga moslashtiramiz
@@ -329,7 +329,6 @@ function getMainMenu(chatId) {
                 [{ text: "💎 Avto Almaz", callback_data: "menu_almaz" }, { text: "🏷 Avto UTag", callback_data: "menu_utag" }],
                 [{ text: "👤 AvtoUser", callback_data: "menu_avtouser" }, { text: "⚔️ Avto Reyd", callback_data: "menu_reyd" }],
                 [{ text: "📣 Avto Reklama", callback_data: "menu_reklama" }, { text: "📊 Profil", callback_data: "menu_profile" }],
-                [{ text: "🎁 Bonus", callback_data: "menu_bonus" }],
                 [{ text: "🔄 Nomer almashtirish", callback_data: "menu_logout" }],
                 lastRow
             ]
@@ -346,7 +345,7 @@ const getAlmazMenu = (isEnabled) => {
         reply_markup: {
             inline_keyboard: [
                 [{ text: buttonText, callback_data: buttonAction }],
-                [{ text: "◀️ Orqaga", callback_data: "menu_back_main" }]
+                [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
             ]
         }
     };
@@ -455,7 +454,6 @@ function getAdminMenu() {
                 [{ text: "⏳ Kutilayotganlar", callback_data: "admin_pending" }, { text: "✅ Tasdiqlanganlar", callback_data: "admin_approved" }],
                 [{ text: "🚫 Bloklanganlar", callback_data: "admin_blocked" }, { text: "📣 Barchaga Xabar", callback_data: "admin_broadcast" }],
                 [{ text: "📢 Kanallar sozlamasi", callback_data: "admin_channels" }],
-                [{ text: "🎁 Bonus tizimi", callback_data: "admin_bonus" }],
                 [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
             ]
         }
@@ -474,27 +472,14 @@ const isUserAdmin = async (bot, chatId, userId) => {
     }
 };
 
-function getBonusCoinRow() {
-    return [{ text: "🎁 Bonus", callback_data: "menu_bonus" }];
-}
-
 function getPendingPaymentKeyboard() {
     return {
         inline_keyboard: [
-            [{ text: "🎁 Bonus Olish", callback_data: "menu_bonus" }],
             [
-                { text: "👨‍💼 Admin", url: "https://t.me/ortiqov_x7" }
+                { text: "👨‍💻 Admin", url: "https://t.me/ortiqov_x7" }
             ]
         ]
     };
-}
-
-function getAdminCoinKeyboard(targetId) {
-    const id = String(targetId);
-    return [
-        [{ text: "➖ Coin yechib olish", callback_data: `admin_coins_deduct_${id}` }],
-        [{ text: "✏️ Coin belgilash", callback_data: `admin_coins_set_${id}` }]
-    ];
 }
 
 /** Guruh tanlash (request_chat) — har bir funksiya uchun alohida request_id */
@@ -579,9 +564,7 @@ module.exports = {
     getReklamaMenu,
     getReydMenu,
     getAdminMenu,
-    getBonusCoinRow,
     getPendingPaymentKeyboard,
-    getAdminCoinKeyboard,
     getAvtoUserGroupPickerKeyboard,
     getGroupPickerKeyboard,
     getPhoneShareKeyboard,

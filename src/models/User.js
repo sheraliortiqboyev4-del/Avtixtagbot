@@ -82,32 +82,6 @@ const User = sequelize.define('User', {
     joinedAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
-    },
-    coins: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
-    },
-    referrerChatId: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-        defaultValue: null
-    },
-    referralEligible: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-    },
-    referralToken: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true
-    },
-    referralTokenExpiresAt: {
-        type: DataTypes.DATE,
-        allowNull: true
-    },
-    coinRedemptions: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0
     }
 }, {
     tableName: 'users',

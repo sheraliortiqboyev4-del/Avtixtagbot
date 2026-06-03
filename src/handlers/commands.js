@@ -8,22 +8,8 @@ const {
     checkMembership, 
     sendSubscriptionAsk, 
     getMainMenu,
-    getBonusCoinRow,
-    getPendingPaymentKeyboard,
-    getAdminCoinKeyboard
+    getPendingPaymentKeyboard
 } = require('../utils/helpers');
-const {
-    COINS_PER_MONTH,
-    parseStartPayload,
-    handleStartWithReferral,
-    buildBonusMessage,
-    buildCoinMessage,
-    isBonusEnabled
-} = require('../services/bonus');
-
-const bonusExtrasKeyboard = () => ({
-    reply_markup: { inline_keyboard: [getBonusCoinRow()] }
-});
 
 const HELP_TEXT = `🧾 **YORDAM BO'LIMI**
 
@@ -56,22 +42,12 @@ const HELP_TEXT = `🧾 **YORDAM BO'LIMI**
 🔄 **Raqamni o'zgartirish**
 ➤ Joriy akkauntdan chiqib, yangi raqam orqali kirish imkonini beradi.
 
-⚠️ **Eslatma:** Botdan to'liq foydalanish uchun admin tomonidan tasdiqlangan bo'lishingiz shart.
+⚠️ **Eslatma**: Botdan to'liq foydalanish uchun admin tomonidan tasdiqlangan bo'lishingiz shart.
 
-📞 **Rasmiy kanal:** @AvtoBotOfficial
-👨‍💼 **Admin:** @id_uzzz`;
+📞 **Rasmiy kanal**: @AvtoBotOfficial
+👨‍💼 **Admin**: @id_uzzz`;
 
 module.exports = (bot) => {
-    const sendBonusCoinHint = async (chatId, extraText = '') => {
-        if (!(await isBonusEnabled())) return;
-        const prefix = extraText ? `${extraText}\n\n` : '';
-        await bot.sendMessage(
-            chatId,
-            `${prefix}🎁 **Bonus:** do'stlarni taklif qiling — /bonus`,
-            { parse_mode: 'Markdown', ...bonusExtrasKeyboard() }
-        ).catch(() => {});
-    };
-
     bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => { 
         const chatId = msg.chat.id; 
         const name = msg.from.first_name; 
@@ -80,10 +56,6 @@ module.exports = (bot) => {
         if (!getDbReady()) {
             return bot.sendMessage(chatId, '⏳ Bot hali yuklanmoqda. Iltimos, 10 soniyadan keyin qayta /start bosing.');
         }
-        const startPayload = match && match[1] ? match[1].trim() : parseStartPayload(msg.text);
-        const refToken = startPayload && startPayload.startsWith('ref_')
-            ? startPayload.slice(4)
-            : (startPayload || null);
     
         let user = await findUserByChatId(chatId); 
         const isNewUser = !user;
@@ -95,23 +67,9 @@ module.exports = (bot) => {
             user = await User.findOne({ where: { chatId } });
         }
 
-        if (refToken && isNewUser) {
-            const refResult = await handleStartWithReferral(bot, chatId, name, username, refToken, true);
-            if (refResult && refResult.invalidLink) {
-                await bot.sendMessage(chatId, '⚠️ Referral havola eskirgan. Do\'stingizdan yangi havola so\'rang.');
-            }
-        }
-
         const isMember = await checkMembership(bot, chatId);
         if (!isMember) {
             await sendSubscriptionAsk(bot, chatId);
-            if (refToken && isNewUser) {
-                await bot.sendMessage(
-                    chatId,
-                    '📢 Kanallarga obuna bo\'ling va **Tekshirish** ni bosing.',
-                    { parse_mode: 'Markdown' }
-                ).catch(() => {});
-            }
         }
 
         // Adminni avtomatik tasdiqlash
@@ -128,7 +86,7 @@ module.exports = (bot) => {
             });
 
             // Adminga xabar yuborish
-            const now = new Date().toLocaleString('en-US', { timeZone: 'UTC' }); // Yoki foydalanuvchi vaqti
+            const now = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
             const adminNotifyText = `🆕 **Yangi foydalanuvchi!**\n\n👤 Ism: ${name}\n🆔 ID: \`${chatId}\`\n📅 Vaqt: ${now}\n\nBlokdan ochish uchun tugmani bosing:`;
             bot.sendMessage(config.adminId, adminNotifyText, {
                 parse_mode: "Markdown",
@@ -162,7 +120,7 @@ module.exports = (bot) => {
             const paymentAskText =
                 `👋 Assalomu alaykum, Hurmatli ${name}!\n\n` +
                 `⚠ Siz botdan foydalanish uchun botning oylik tulovini amalga oshirmagansiz.\n` +
-                `⚠ Botdan foydalanish uchun admin orqali to'lov qiling yoki dostlarni taklif qilish orqali tekin foydalaning!!!\n\n` +
+                `⚠ Botdan foydalanish uchun admin orqali to'lov qiling!!!\n\n` +
                 `👨‍💼 Admin: @id_uzzz`;
             await bot.sendMessage(chatId, paymentAskText, {
                 parse_mode: 'Markdown',
@@ -186,7 +144,7 @@ module.exports = (bot) => {
             // Agar sessiya bo'lmasa, login jarayonini boshlaymiz
             const { getPhoneShareKeyboard } = require('../utils/helpers');
             global.userStates[chatId] = { step: 'WAITING_PHONE' };
-            const text = `👋 **Xush kelibsiz!**\n\nBot funksiyalaridan foydalanish uchun Telegram akkauntingizga kirishingiz kerak.\n\n📞 Iltimos, **telefon raqamingizni** xalqaro formatda yuboring:\n(Masalan: \`+998901234567\`)`;
+            const text = `👋 **Xush kelibsiz!**\n\nBot funksiyalaridan foydalanish uchun Telegram akkauntingizga kirishingiz kerak.\n\n📞 Iltimos, **telefon raqamni** xalqaro formatda yuboring:\n(Masalan: \`+998901234567\`)`;
             bot.sendMessage(chatId, text, { parse_mode: "Markdown", reply_markup: getPhoneShareKeyboard() });
         }
     }); 
@@ -251,10 +209,9 @@ module.exports = (bot) => {
             `📊 **Statistika:**\n` +
             `⚔️ Reydlar: ${user.reydCount || 0} ta\n` +
             `👥 Yig'ilgan userlar: ${user.usersGathered || 0} ta\n` +
-            `📢 Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
+            `� Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
             `🏷 Utaglar: ${user.utagCount || 0} ta\n` +
-            `💎 Almazlar: ${user.clicks || 0} ta\n` +
-            `🪙 Coinlar: ${user.coins || 0} ta\n\n` +
+            `💎 Almazlar: ${user.clicks || 0} ta\n\n` +
             `📅 **Ro'yxatdan o'tgan:** ${regDate}`;
 
         bot.sendMessage(config.adminId, text, { 
@@ -265,8 +222,7 @@ module.exports = (bot) => {
                     [{ text: "✅ 1 Oy", callback_data: `admin_approve_1month_${targetId}` }],
                     [{ text: "👑 VIP", callback_data: `admin_approve_vip_${targetId}` }],
                     [{ text: "✍️ Ixtiyoriy", callback_data: `admin_approve_${targetId}` }],
-                    [{ text: "🚫 Bloklash", callback_data: `admin_block_${targetId}` }],
-                    ...getAdminCoinKeyboard(targetId)
+                    [{ text: "🚫 Bloklash", callback_data: `admin_block_${targetId}` }]
                 ] 
             } 
         }); 
@@ -286,39 +242,5 @@ module.exports = (bot) => {
             return bot.sendMessage(config.adminId, "❌ Sessiya topilmadi! Avval botga kiring.");
         }
         bot.sendMessage(config.adminId, `🔐 **Sessiya string'ingiz:**\n\n\`${user.session}\``, { parse_mode: "Markdown" });
-    });
-
-    bot.onText(/\/bonus/, async (msg) => {
-        const chatId = msg.chat.id;
-        let user = await User.findOne({ where: { chatId } });
-        if (!user) {
-            user = await User.create({
-                chatId,
-                name: msg.from.first_name,
-                username: msg.from.username,
-                status: chatId.toString() === config.adminId.toString() ? 'approved' : 'pending'
-            });
-        }
-        const { text, keyboard, parseMode } = await buildBonusMessage(bot, chatId);
-        await bot.sendMessage(chatId, text, {
-            parse_mode: parseMode || 'HTML',
-            reply_markup: keyboard,
-            skipEmojiWrap: true
-        });
-    });
-
-    bot.onText(/\/coin/, async (msg) => {
-        const chatId = msg.chat.id;
-        let user = await User.findOne({ where: { chatId } });
-        if (!user) {
-            user = await User.create({
-                chatId,
-                name: msg.from.first_name,
-                username: msg.from.username,
-                status: chatId.toString() === config.adminId.toString() ? 'approved' : 'pending'
-            });
-        }
-        const { text, keyboard } = await buildCoinMessage(chatId);
-        await bot.sendMessage(chatId, text, { parse_mode: 'Markdown', reply_markup: keyboard });
     });
 };

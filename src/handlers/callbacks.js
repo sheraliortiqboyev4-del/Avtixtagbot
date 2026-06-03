@@ -9,23 +9,8 @@ const {
     getMainMenu, 
     getAlmazMenu,
     checkMembership,
-    getBonusCoinRow,
     getPendingPaymentKeyboard
 } = require('../utils/helpers');
-const {
-    isBonusEnabled,
-    setBonusEnabled,
-    buildBonusMessage,
-    buildCoinMessage,
-    redeemCoinsForMonth,
-    refreshReferralToken,
-    processSubscriptionReferralReward,
-    getAdminBonusStats,
-    getTop10Referrers,
-    getCoinRedeemers,
-    adminSetCoins,
-    COINS_PER_MONTH
-} = require('../services/bonus');
 
 if (!global.userStates) global.userStates = {};
 
@@ -69,22 +54,17 @@ module.exports = (bot) => {
             return;
         }
 
-        // --- 1. SESSION CHECK (Except for specific ones) ---
+        // --- 1. SESSION CHECK ---
         const user = await findUserByChatId(chatId);
         const allowedCallbacks = [
             "check_subscription",
-            "menu_bonus",
-            "menu_coin",
-            "bonus_new_link",
-            "coin_redeem_month",
             "menu_back_main",
             "auth_resend_sms",
             "auth_resend_app"
         ];
         const isAdminAction = data.startsWith("admin_");
-        const isBonusCallback = data.startsWith("bonus_") || data.startsWith("coin_") || data === "menu_bonus" || data === "menu_coin";
         
-        if (!isAdminAction && !allowedCallbacks.includes(data) && !isBonusCallback) {
+        if (!isAdminAction && !allowedCallbacks.includes(data)) {
             if (!user || !user.session) {
                 await safeAnswer({ 
                     text: "⚠️ Botdan foydalanish uchun avval Telegram akkauntingiz bilan tizimga kiring. /start ni bosing.", 
@@ -106,112 +86,9 @@ module.exports = (bot) => {
             }
         }
 
-        // --- BONUS / COIN (session va obuna shartsiz) ---
-        if (data === "menu_bonus") {
-            if (!user) {
-                await User.create({
-                    chatId,
-                    name: query.from.first_name,
-                    username: query.from.username,
-                    status: chatId.toString() === config.adminId.toString() ? 'approved' : 'pending'
-                });
-            }
-            const { text, keyboard, parseMode } = await buildBonusMessage(bot, chatId);
-            const bonusOpts = { parse_mode: parseMode || 'HTML', reply_markup: keyboard, skipEmojiWrap: true };
-            try {
-                await safeEdit(chatId, messageId, text, bonusOpts);
-            } catch (e) {
-                await bot.sendMessage(chatId, text, bonusOpts);
-            }
-            return await safeAnswer();
-        }
-
-        if (data === "menu_coin") {
-            if (!user) {
-                await User.create({
-                    chatId,
-                    name: query.from.first_name,
-                    username: query.from.username,
-                    status: chatId.toString() === config.adminId.toString() ? 'approved' : 'pending'
-                });
-            }
-            const { text, keyboard } = await buildCoinMessage(chatId);
-            try {
-                await safeEdit(chatId, messageId, text, { parse_mode: "Markdown", reply_markup: keyboard });
-            } catch (e) {
-                await bot.sendMessage(chatId, text, { parse_mode: "Markdown", reply_markup: keyboard });
-            }
-            return await safeAnswer();
-        }
-
-        if (data === "bonus_new_link") {
-            if (!(await isBonusEnabled())) {
-                return await safeAnswer({ text: "Bonus tizimi o'chirilgan", show_alert: true });
-            }
-            await refreshReferralToken(chatId);
-            const { text, keyboard, parseMode } = await buildBonusMessage(bot, chatId);
-            await safeEdit(chatId, messageId, text, {
-                parse_mode: parseMode || 'HTML',
-                reply_markup: keyboard,
-                skipEmojiWrap: true
-            });
-            return await safeAnswer({ text: "Yangi havola yaratildi (5 kun)", show_alert: false });
-        }
-
-        if (data.startsWith('admin_coins_') && chatId.toString() === config.adminId.toString()) {
-            if (data.startsWith('admin_coins_deduct_')) {
-                const targetId = data.replace('admin_coins_deduct_', '');
-                const u = await User.findOne({ where: { chatId: targetId } });
-                global.userStates[chatId] = { step: 'WAITING_COIN_DEDUCT', targetId };
-                await safeAnswer();
-                bot.sendMessage(
-                    chatId,
-                    `➖ User \`${targetId}\` dan nechta **coin** yechib olasiz?\n\nHozirgi balans: **${u?.coins || 0}** coin\n(Masalan: \`5\` yoki \`25\`)`,
-                    { parse_mode: 'Markdown', skipEmojiWrap: true }
-                );
-                return;
-            }
-            if (data.startsWith('admin_coins_set_')) {
-                const targetId = data.replace('admin_coins_set_', '');
-                global.userStates[chatId] = { step: 'WAITING_COIN_SET', targetId };
-                const u = await User.findOne({ where: { chatId: targetId } });
-                await safeAnswer();
-                bot.sendMessage(
-                    chatId,
-                    `✏️ User \`${targetId}\` uchun yangi **coin** miqdorini yuboring.\nHozirgi: **${u?.coins || 0}**`,
-                    { parse_mode: 'Markdown', skipEmojiWrap: true }
-                );
-                return;
-            }
-        }
-
-        if (data === "coin_redeem_month") {
-            try {
-                const { newCoins, expireAt } = await redeemCoinsForMonth(bot, chatId);
-                const expStr = expireAt.toLocaleDateString('uz-UZ');
-                await safeAnswer({ text: "1 oylik obuna faollashtirildi!", show_alert: true });
-                const { text, keyboard } = await buildCoinMessage(chatId);
-                await safeEdit(
-                    chatId,
-                    messageId,
-                    `✅ **1 oylik obuna sotib olindi!**\n\n🪙 Qolgan coin: **${newCoins}**\n📅 Muddat: ${expStr}\n\n${text}`,
-                    { parse_mode: "Markdown", reply_markup: keyboard, skipEmojiWrap: true }
-                );
-                await bot.sendMessage(
-                    chatId,
-                    '🎉 Endi /start ni bosing — bot funksiyalaridan foydalanishingiz mumkin.',
-                    getMainMenu(chatId)
-                );
-            } catch (e) {
-                await safeAnswer({ text: e.message, show_alert: true });
-            }
-            return;
-        }
-
         // --- 2. SUBSCRIPTION CHECK ---
         const isMember = await checkMembership(bot, chatId);
-        const skipSubCheck = isBonusCallback || data === "check_subscription";
-        if (!isMember && !skipSubCheck) {
+        if (!isMember && data !== "check_subscription") {
             await safeAnswer({ text: "⚠️ Botdan foydalanish uchun avval kanallarga a'zo bo'ling!", show_alert: true });
             return sendSubscriptionAsk(bot, chatId);
         }
@@ -220,11 +97,10 @@ module.exports = (bot) => {
             const isMemberNow = await checkMembership(bot, chatId);
             if (isMemberNow) {
                 try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-                await processSubscriptionReferralReward(bot, chatId);
                 await bot.sendMessage(
                     chatId,
                     "✅ **Rahmat!** Siz barcha kanallarga a'zo bo'ldingiz.\n\n/start ni bosing.",
-                    { parse_mode: "Markdown", reply_markup: { inline_keyboard: [getBonusCoinRow()] } }
+                    { parse_mode: "Markdown" }
                 );
             } else {
                 await safeAnswer({ text: "❌ Siz hali barcha kanallarga a'zo bo'lmadingiz!", show_alert: true });
@@ -236,9 +112,8 @@ module.exports = (bot) => {
         if (data === "menu_back_main") {
             const u = await User.findOne({ where: { chatId } });
             if (!u || !u.session) {
-                await safeEdit(chatId, messageId, "📋 **Menyu:**\n\nBonus bo'limi:", {
-                    parse_mode: "Markdown",
-                    reply_markup: { inline_keyboard: [getBonusCoinRow()] }
+                await safeEdit(chatId, messageId, "📋 **Menyu:**", {
+                    parse_mode: "Markdown"
                 });
             } else {
                 await safeEdit(chatId, messageId, "📋 **Asosiy menyu:**", { parse_mode: "Markdown", ...getMainMenu(chatId) });
@@ -843,150 +718,90 @@ module.exports = (bot) => {
             return await safeAnswer();
         }
 
-        if (data === "admin_all_users" || data.startsWith('admin_list_') || data === "admin_pending" || data === "admin_approved" || data === "admin_blocked") { 
-            let page = 1;
-            let statusFilter = 'all';
-
-            if (data.startsWith('admin_list_')) {
-                const parts = data.split('_');
-                page = parseInt(parts[2]) || 1;
-                statusFilter = parts[3] || 'all';
-            } else if (data === "admin_pending") {
-                statusFilter = 'pending';
-            } else if (data === "admin_approved") {
-                statusFilter = 'approved';
-            } else if (data === "admin_blocked") {
-                statusFilter = 'blocked';
+        if (data === "admin_all_users") {
+            const users = await User.findAll({ order: [['joinedAt', 'DESC']] });
+            
+            let userList = "👥 **Barcha foydalanuvchilar:**\n\n";
+            for (const u of users.slice(0, 30)) {
+                userList += `• ${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''} - ${u.chatId} - ${u.status}\n`;
+            }
+            if (users.length > 30) {
+                userList += `\n... va yana ${users.length - 30} ta foydalanuvchi`;
             }
 
-            const limit = 10;
-            const where = statusFilter === 'all' ? {} : { status: statusFilter };
-            const total = await User.count({ where }); 
-            const users = await User.findAll({ 
-                where, 
-                order: [['joinedAt', 'DESC']], 
-                offset: (page - 1) * limit, 
-                limit 
-            }); 
-            
-            let statusTitle = "Barcha A'zolar";
-            if (statusFilter === 'pending') statusTitle = "Kutilayotganlar";
-            if (statusFilter === 'approved') statusTitle = "Tasdiqlanganlar";
-            if (statusFilter === 'blocked') statusTitle = "Bloklanganlar";
+            const buttons = [[{ text: "🔙 Orqaga", callback_data: "admin_panel" }]];
 
-            const totalPages = Math.ceil(total / limit) || 1;
-            let text = `👥 **${statusTitle}:** (Sahifa ${page}/${totalPages})\n\n`; 
-            
-            users.forEach((u, i) => {
-                const statusEmoji = u.status === 'approved' ? '✅' : (u.status === 'blocked' ? '🚫' : '⏳');
-                const name = u.name || "Noma'lum";
-                const username = u.username ? `(@${u.username})` : "";
-                
-                const date = u.joinedAt ? new Date(u.joinedAt) : new Date();
-                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                
-                text += `👤 ${name} ${username} ${statusEmoji}\n`;
-                text += `🆔 \`${u.chatId}\` | /info_${u.chatId}\n`;
-                text += `📅 ${formattedDate}\n\n`;
-            }); 
-            
-            const nav = []; 
-            if (page > 1) nav.push({ text: "⬅️ Oldingi", callback_data: `admin_list_${page-1}_${statusFilter}` }); 
-            if (total > page * limit) nav.push({ text: "Keyingi ➡️", callback_data: `admin_list_${page+1}_${statusFilter}` }); 
-            
-            await safeEdit(chatId, messageId, text, { 
-                parse_mode: "Markdown", 
-                reply_markup: { 
-                    inline_keyboard: [
-                        nav, 
-                        [{ text: "🔙 Orqaga", callback_data: "admin_panel" }]
-                    ] 
-                } 
-            }); 
-            return await safeAnswer();
-        } 
-
-        if (data.startsWith('admin_approve_1month_')) { 
-            const targetId = data.split('_')[3]; 
-            const expireAt = new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)); // 30 kun
-            await User.update({ status: 'approved', subscriptionType: 'Standard', expireAt, expiryWarningSent: false }, { where: { chatId: targetId } }); 
-            triggerBackup('admin_tasdiq_1oy', true);
-            
-            bot.sendMessage(chatId, `✅ User ${targetId} 1 oyga Standard qilib tasdiqlandi.`); 
-            bot.sendMessage(targetId, "🎉 Siz admin tomonidan tasdiqlandingiz! \n\n 🔰 Tarif: 1 oy \n Endi /start ni bosib ro'yxatdan o'tishingiz mumkin."); 
-            
-            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-            return await safeAnswer();
-        }
-
-        if (data.startsWith('admin_approve_vip_')) { 
-            const targetId = data.split('_')[3]; 
-            await User.update({ status: 'approved', subscriptionType: 'VIP', expireAt: null, expiryWarningSent: false }, { where: { chatId: targetId } }); 
-            triggerBackup('admin_tasdiq_vip', true);
-            
-            bot.sendMessage(chatId, `👑 User ${targetId} **Cheksiz VIP** qilib tasdiqlandi.`); 
-            bot.sendMessage(targetId, "🎉 Siz admin tomonidan tasdiqlandingiz! \n\n 🔰 Tarif: 👑 VIP \n Endi /start ni bosib ro'yxatdan o'tishingiz mumkin."); 
-            
-            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-            return await safeAnswer();
-        }
-
-        if (data.startsWith('admin_approve_')) { 
-            const targetId = data.split('_')[2]; 
-            global.userStates[chatId] = { step: 'WAITING_TIME', targetId }; 
-            bot.sendMessage(chatId, "✍️ Muddatni kiriting (Masalan: `1 oy`, `7 kun`, `2 soat`):"); 
-            return await safeAnswer();
-        } 
-
-        if (data.startsWith('admin_block_')) {
-            const targetId = data.split('_')[2];
-            await User.update({ status: 'blocked', session: null }, { where: { chatId: targetId } });
-            triggerBackup('admin_blok', true);
-            bot.sendMessage(chatId, `🚫 User ${targetId} bloklandi.`);
-            
-            const blockedText = `⚠ Sizning foydalanish muddatingiz tugagan. \nBotdan foydalanishni davom ettirish uchun to'lovni amalga oshiring va botni qayta ishga tushiring. \n\n👨‍💼 Admin: @ortiqov_x7`;
-            bot.sendMessage(targetId, blockedText, {
-                reply_markup: {
-                    inline_keyboard: [[{ text: "👨‍💼 Admin bilan bog'lanish", url: "https://t.me/ortiqov_x7" }]]
-                }
+            await safeEdit(chatId, messageId, userList, {
+                parse_mode: "Markdown",
+                reply_markup: { inline_keyboard: buttons }
             });
             return await safeAnswer();
         }
 
-        if (data.startsWith('admin_unblock_')) {
-            const targetId = data.split('_')[2];
-            await User.update({ status: 'pending' }, { where: { chatId: targetId } });
-            bot.sendMessage(chatId, `✅ User ${targetId} blokdan ochildi (status: pending).`);
-            bot.sendMessage(targetId, "✅ Siz admin tomonidan blokdan ochildingiz. Endi qayta ro'yxatdan o'tishingiz mumkin.");
+        if (data === "admin_pending" || data === "admin_approved" || data === "admin_blocked") {
+            const statusMap = {
+                "admin_pending": "pending",
+                "admin_approved": "approved",
+                "admin_blocked": "blocked"
+            };
+            const status = statusMap[data];
+            const statusTextMap = {
+                "pending": "⏳ Kutilayotganlar",
+                "approved": "✅ Tasdiqlanganlar",
+                "blocked": "🚫 Bloklanganlar"
+            };
+            
+            const users = await User.findAll({ where: { status }, order: [['joinedAt', 'DESC']] });
+            
+            let userList = `${statusTextMap[status]}:\n\n`;
+            for (const u of users.slice(0, 30)) {
+                userList += `• ${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''} - \`${u.chatId}\`\n`;
+            }
+            if (users.length > 30) {
+                userList += `\n... va yana ${users.length - 30} ta foydalanuvchi`;
+            }
+            if (users.length === 0) {
+                userList = `${statusTextMap[status]} ro'yxati bo'sh`;
+            }
+
+            const buttons = [[{ text: "🔙 Orqaga", callback_data: "admin_panel" }]];
+
+            await safeEdit(chatId, messageId, userList, {
+                parse_mode: "Markdown",
+                reply_markup: { inline_keyboard: buttons }
+            });
             return await safeAnswer();
         }
 
-        if (data === "admin_broadcast") { 
-            global.userStates[chatId] = { step: 'WAITING_BROADCAST' }; 
-            bot.sendMessage(chatId, "📣 Barchaga yuboriladigan xabarni yuboring:"); 
-            return await safeAnswer();
-        } 
+        if (data === "admin_broadcast") {
+            global.userStates[chatId] = { step: 'WAITING_BROADCAST' };
+            await safeAnswer();
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+            return bot.sendMessage(chatId, "📢 Barchaga yuboriladigan xabarni yuboring (matn, rasm, video va h.k.):", {
+                reply_markup: {
+                    inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "admin_panel" }]]
+                }
+            });
+        }
 
-        // --- 4. CHANNELS MANAGEMENT ---
         if (data === "admin_channels") {
-            if (chatId.toString() !== config.adminId.toString()) return;
             const channels = await Channel.findAll();
-            let text = "📢 **Majburiy obuna kanallari:**\n\n";
-            const buttons = [];
+            let channelList = "📢 **Kanal sozlamalari:**\n\n";
             
             if (channels.length === 0) {
-                text += "Hozircha kanallar qo'shilmagan.";
+                channelList += "Hozircha hech qanday kanal qo'shilmagan";
             } else {
-                channels.forEach(c => {
-                    text += `🔹 **${c.name}**\nID: \`${c.channelId}\`\nURL: ${c.url}\n\n`;
-                    buttons.push([{ text: `❌ ${c.name} ni o'chirish`, callback_data: `admin_del_channel_${c.id}` }]);
-                });
+                for (const ch of channels) {
+                    channelList += `• ${ch.name} - ${ch.url}\n`;
+                }
             }
             
-            buttons.push([{ text: "➕ Yangi kanal qo'shish", callback_data: "admin_add_channel" }]);
-            buttons.push([{ text: "🔙 Orqaga", callback_data: "admin_panel" }]);
-            
-            await safeEdit(chatId, messageId, text, {
+            const buttons = [
+                [{ text: "➕ Kanal qo'shish", callback_data: "admin_add_channel" }],
+                [{ text: "🔙 Orqaga", callback_data: "admin_panel" }]
+            ];
+
+            await safeEdit(chatId, messageId, channelList, {
                 parse_mode: "Markdown",
                 reply_markup: { inline_keyboard: buttons }
             });
@@ -994,144 +809,55 @@ module.exports = (bot) => {
         }
 
         if (data === "admin_add_channel") {
-            if (chatId.toString() !== config.adminId.toString()) return;
             global.userStates[chatId] = { step: 'WAITING_CHANNEL_ID' };
-            bot.sendMessage(chatId, "🆔 Yangi kanalning **ID raqamini** yuboring (Masalan: `-100123456789`):");
-            return await safeAnswer();
+            await safeAnswer();
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+            return bot.sendMessage(chatId, "📢 Kanal ID sini yuboring (masalan: -1001234567890):", {
+                reply_markup: {
+                    inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "admin_channels" }]]
+                }
+            });
         }
 
-        if (data.startsWith("admin_del_channel_")) {
-            if (chatId.toString() !== config.adminId.toString()) return;
-            const channelId = data.split('_')[3];
-            await Channel.destroy({ where: { id: channelId } });
-            await safeAnswer({ text: "✅ Kanal o'chirildi!", show_alert: true });
-            
-            // Kanallar ro'yxatini yangilash
-            const channels = await Channel.findAll();
-            let text = "📢 **Majburiy obuna kanallari:**\n\n";
-            const buttons = [];
-            if (channels.length === 0) {
-                text += "Hozircha kanallar qo'shilmagan.";
-            } else {
-                channels.forEach(c => {
-                    text += `🔹 **${c.name}**\nID: \`${c.channelId}\`\nURL: ${c.url}\n\n`;
-                    buttons.push([{ text: `❌ ${c.name} ni o'chirish`, callback_data: `admin_del_channel_${c.id}` }]);
-                });
-            }
-            buttons.push([{ text: "➕ Yangi kanal qo'shish", callback_data: "admin_add_channel" }]);
-            buttons.push([{ text: "🔙 Orqaga", callback_data: "admin_panel" }]);
-            
-            await safeEdit(chatId, messageId, text, {
-                parse_mode: "Markdown",
-                reply_markup: { inline_keyboard: buttons }
-            });
+        if (data.startsWith("admin_approve_1month_")) {
+            const targetId = data.replace("admin_approve_1month_", "");
+            const now = new Date();
+            const expireAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            await User.update({ status: 'approved', expireAt, expiryWarningSent: false }, { where: { chatId: targetId } });
+            triggerBackup('admin_approve', true);
+            await bot.sendMessage(targetId, "🎉 Tabriklaymiz! Sizning akkauntingiz 1 oylik uchun tasdiqlandi! /start ni bosing.");
+            await safeAnswer({ text: "✅ Foydalanuvchi 1 oylik uchun tasdiqlandi!", show_alert: true });
             return;
         }
 
-        // --- ADMIN: BONUS TIZIMI ---
-        if (data === "admin_bonus") {
-            if (chatId.toString() !== config.adminId.toString()) return;
-            const enabled = await isBonusEnabled();
-            const stats = await getAdminBonusStats();
-            const statusText = enabled ? '🟢 Faol (demo)' : '🔴 Nofaol';
-            const text =
-                `🎁 **Bonus / Referral tizimi**\n\n` +
-                `Holat: ${statusText}\n\n` +
-                `🪙 Jami coinlar (barcha userlar): ${stats.totalCoins}\n` +
-                `👥 Referrallar: ${stats.totalReferrals} (coin berilgan: ${stats.rewardedReferrals})\n` +
-                `⏳ Kutilmoqda: ${stats.pendingReferrals}\n` +
-                `✅ Coin bilan 1 oy olganlar: ${stats.totalRedemptions} marta\n` +
-                `👤 Coini bor userlar: ${stats.usersWithCoins}\n\n` +
-                `📌 Qoida: yangi user → kanal obunasi → referrer +1 coin\n` +
-                `💰 ${COINS_PER_MONTH} coin = 1 oylik obuna`;
-
-            const toggleLabel = enabled ? '🔴 O\'chirish' : '🟢 Yoqish';
-            await safeEdit(chatId, messageId, text, {
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: toggleLabel, callback_data: 'admin_bonus_toggle' }],
-                        [{ text: '🏆 Top 10 ', callback_data: 'admin_bonus_top10' }],
-                        [{ text: '✅ Coin redem', callback_data: 'admin_bonus_redeemed' }],
-                        [{ text: '🔙 Admin panel', callback_data: 'admin_panel' }]
-                    ]
-                }
-            });
-            return await safeAnswer();
-        }
-
-        if (data === "admin_bonus_toggle") {
-            if (chatId.toString() !== config.adminId.toString()) return;
-            const enabled = await isBonusEnabled();
-            await setBonusEnabled(!enabled);
-            await safeAnswer({ text: !enabled ? 'Bonus yoqildi' : 'Bonus o\'chirildi', show_alert: true });
-            const stats = await getAdminBonusStats();
-            const statusText = !enabled ? '🟢 Yoqilgan (demo)' : '🔴 O\'chirilgan';
-            const text =
-                `🎁 **Bonus / Referral tizimi**\n\nHolat: ${statusText}\n\n` +
-                `🪙 Jami coinlar: ${stats.totalCoins}\n` +
-                `👥 Referrallar: ${stats.totalReferrals}\n` +
-                `✅ Coin bilan 1 oy: ${stats.totalRedemptions} marta`;
-            const toggleLabel = !enabled ? '🔴 Bonusni o\'chirish' : '🟢 Bonusni yoqish';
-            await safeEdit(chatId, messageId, text, {
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: toggleLabel, callback_data: 'admin_bonus_toggle' }],
-                        [{ text: '🏆 Top 10 referrer', callback_data: 'admin_bonus_top10' }],
-                        [{ text: '✅ Coin bilan olganlar', callback_data: 'admin_bonus_redeemed' }],
-                        [{ text: '🔙 Admin panel', callback_data: 'admin_panel' }]
-                    ]
-                }
-            });
+        if (data.startsWith("admin_approve_vip_")) {
+            const targetId = data.replace("admin_approve_vip_", "");
+            await User.update({ status: 'approved', expireAt: null, subscriptionType: 'VIP', expiryWarningSent: false }, { where: { chatId: targetId } });
+            triggerBackup('admin_approve', true);
+            await bot.sendMessage(targetId, "🎉 Tabriklaymiz! Sizning akkauntingiz VIP sifatida tasdiqlandi! /start ni bosing.");
+            await safeAnswer({ text: "✅ Foydalanuvchi VIP sifatida tasdiqlandi!", show_alert: true });
             return;
         }
 
-        if (data === "admin_bonus_top10") {
-            if (chatId.toString() !== config.adminId.toString()) return;
-            const top = await getTop10Referrers();
-            let text = '🏆 **Top 10 referrerlar:**\n\n';
-            if (top.length === 0) {
-                text += 'Hali ma\'lumot yo\'q.';
-            } else {
-                top.forEach((r, i) => {
-                    const un = r.username ? `@${r.username}` : '';
-                    text += `${i + 1}. ${r.name} ${un}\n`;
-                    text += `   🆔 \`${r.chatId}\` | 🪙 ${r.coins} | ✅ ${r.rewarded}/${r.total}\n\n`;
-                });
-            }
-            await safeEdit(chatId, messageId, text, {
-                parse_mode: 'Markdown',
+        if (data.startsWith("admin_approve_") && !data.includes("1month") && !data.includes("vip")) {
+            const targetId = data.replace("admin_approve_", "");
+            global.userStates[chatId] = { step: 'WAITING_TIME', targetId };
+            await safeAnswer();
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+            return bot.sendMessage(chatId, "⏳ Muddatni kiriting (masalan: 1 oy, 2 kun, 1 soat):", {
                 reply_markup: {
-                    inline_keyboard: [[{ text: '🔙 Bonus', callback_data: 'admin_bonus' }]]
+                    inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "admin_panel" }]]
                 }
             });
-            return await safeAnswer();
         }
 
-        if (data === "admin_bonus_redeemed") {
-            if (chatId.toString() !== config.adminId.toString()) return;
-            const list = await getCoinRedeemers(25);
-            let text = '✅ **Coin bilan 1 oylik obuna olganlar:**\n\n';
-            if (list.length === 0) {
-                text += 'Hali hech kim sotib olmagan.';
-            } else {
-                list.forEach((u) => {
-                    const un = u.username ? `@${u.username}` : '';
-                    text += `👤 ${u.name || '—'} ${un}\n🆔 \`${u.chatId}\` | 🪙 ${u.coins} | 🔄 ${u.coinRedemptions}x\n\n`;
-                });
-            }
-            text += '\n_Ushbu foydalanuvchilar `approved` (Coin Bonus) holatida._';
-            await safeEdit(chatId, messageId, text, {
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [[{ text: '🔙 Bonus', callback_data: 'admin_bonus' }]]
-                }
-            });
-            return await safeAnswer();
+        if (data.startsWith("admin_block_")) {
+            const targetId = data.replace("admin_block_", "");
+            await User.update({ status: 'blocked' }, { where: { chatId: targetId } });
+            triggerBackup('admin_block', true);
+            await bot.sendMessage(targetId, "⚠️ Sizning akkauntingiz bloklandi. Admin bilan bog'laning.");
+            await safeAnswer({ text: "🚫 Foydalanuvchi bloklandi!", show_alert: true });
+            return;
         }
-
-        await safeAnswer(); 
     });
 };
-
