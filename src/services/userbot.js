@@ -978,7 +978,7 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
             for await (const message of client.iterMessages(entity, { limit: historyLimit })) {
                 scannedMessages++;
 
-                // Entitiesni tekshirish (mention, text_mention)
+                // Entitiesni tekshirish (faqat @username mentionlari)
                 if (message.entities && Array.isArray(message.entities)) {
                     for (const ent of message.entities) {
                         if (ent instanceof Api.MessageEntityMention) {
@@ -1006,37 +1006,8 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
                                     }
                                 }
                             }
-                        } else if (ent instanceof Api.MessageEntityMentionName) {
-                            // User ID orqali mention (text_mention)
-                            if (ent.userId) {
-                                try {
-                                    const user = await client.getEntity(ent.userId);
-                                    if (user && user instanceof Api.User && !user.bot && user.username && !user.deleted && user.id.toString() !== myId.toString()) {
-                                        const userIdStr = user.id.toString();
-                                        if (!gatheredUserIds.has(userIdStr)) {
-                                            members.push({ id: userIdStr, username: user.username });
-                                            gatheredUserIds.add(userIdStr);
-                                            memberCount++;
-
-                                            // Har 200 ta yig'ilganda darhol yuborish
-                                            if (members.length >= 200) {
-                                                // Alfavit bo'yicha saralash
-                                                members.sort((a, b) => a.username.localeCompare(b.username));
-                                                let text = `🏷 **Mention azolar:** ( ${memberCount} ta, ${memberParts} qism )\n\n`;
-                                                text += members.map(m => `@${m.username}`).join("\n");
-                                                await bot.sendMessage(chatId, text).catch(e => console.error("Batch send error:", e.message));
-                                                members.length = 0; // Massivni tozalash
-                                                memberParts++; // Qism sonini oshirish
-                                                await new Promise(r => setTimeout(r, 2000)); // Flood protection
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    // Foydalanuvchi topilmasa, skip qilamiz
-                                    console.error("User fetch error:", e.message);
-                                }
-                            }
                         }
+                        // MessageEntityMentionName (ID orqali mention) ni skip qilamiz, chunki undan username ololmaymiz
                     }
                 }
                 
