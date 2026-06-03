@@ -209,7 +209,7 @@ module.exports = (bot) => {
             `📊 **Statistika:**\n` +
             `⚔️ Reydlar: ${user.reydCount || 0} ta\n` +
             `👥 Yig'ilgan userlar: ${user.usersGathered || 0} ta\n` +
-            `� Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
+            `📢 Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
             `🏷 Utaglar: ${user.utagCount || 0} ta\n` +
             `💎 Almazlar: ${user.clicks || 0} ta\n\n` +
             `📅 **Ro'yxatdan o'tgan:** ${regDate}`;

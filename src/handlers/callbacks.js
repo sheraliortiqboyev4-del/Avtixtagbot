@@ -771,20 +771,69 @@ module.exports = (bot) => {
             return await safeAnswer();
         }
 
+        if (data.startsWith("admin_info_")) {
+            const targetId = data.replace("admin_info_", "");
+            const user = await User.findOne({ where: { chatId: targetId } });
+            if (!user) {
+                return await safeAnswer({ text: "❌ Foydalanuvchi topilmadi.", show_alert: true });
+            }
+            
+            const { formatRemainingTime } = require('../utils/helpers');
+            
+            const statusText = user.status === 'approved' ? "✅ Tasdiqlangan" : (user.status === 'blocked' ? "🚫 Bloklangan" : "⏳ Tasdiqlanmagan");
+            const tarifText = user.subscriptionType || "Oddiy";
+            let remainingTime = formatRemainingTime(user.expireAt);
+            if (remainingTime.includes("Cheksiz")) remainingTime = "Cheksiz";
+
+            const rekAccCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
+            const reydAccCount = user.reydAccounts ? user.reydAccounts.length : 0;
+            
+            const joinedDate = user.joinedAt ? new Date(user.joinedAt) : new Date();
+            const regDate = `${joinedDate.getFullYear()}-${String(joinedDate.getMonth() + 1).padStart(2, '0')}-${String(joinedDate.getDate()).padStart(2, '0')} ${String(joinedDate.getHours()).padStart(2, '0')}:${String(joinedDate.getMinutes()).padStart(2, '0')}`;
+
+            const text = `👤 **Foydalanuvchi Ma'lumotlari:**\n\n` +
+                `📛 **Ism:** ${user.name || "Noma'lum"}\n` +
+                `🔗 **Username:** ${user.username ? `@${user.username}` : "Yo'q"}\n` +
+                `🆔 **ID:** \`${user.chatId}\`\n` +
+                `🔰 **Holat:** ${statusText}\n` +
+                `⏰ **Tarif:** ${tarifText}\n` +
+                `⏳ **Qolgan vaqt:** ${remainingTime}\n\n` +
+                `🗂 **Ulangan akkauntlar soni:**\n` +
+                `📣 Reklama: ${rekAccCount} ta | ⚔️ Reyd: ${reydAccCount} ta\n\n` +
+                `📊 **Statistika:**\n` +
+                `⚔️ Reydlar: ${user.reydCount || 0} ta\n` +
+                `👥 Yig'ilgan userlar: ${user.usersGathered || 0} ta\n` +
+                `📢 Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
+                `🏷 Utaglar: ${user.utagCount || 0} ta\n` +
+                `💎 Almazlar: ${user.clicks || 0} ta\n\n` +
+                `📅 **Ro'yxatdan o'tgan:** ${regDate}`;
+
+            await safeEdit(chatId, messageId, text, { 
+                parse_mode: "Markdown",
+                reply_markup: { 
+                    inline_keyboard: [
+                        [{ text: "✅ 1 Oy", callback_data: `admin_approve_1month_${targetId}` }],
+                        [{ text: "👑 VIP", callback_data: `admin_approve_vip_${targetId}` }],
+                        [{ text: "✍️ Ixtiyoriy", callback_data: `admin_approve_${targetId}` }],
+                        [{ text: "🚫 Bloklash", callback_data: `admin_block_${targetId}` }],
+                        [{ text: "🔙 Orqaga", callback_data: "admin_panel" }]
+                    ] 
+                } 
+            });
+            return await safeAnswer();
+        }
+        
         if (data === "admin_all_users") {
             const users = await User.findAll({ order: [['joinedAt', 'DESC']] });
             
-            let userList = "👥 **Barcha foydalanuvchilar:**\n\n";
+            const buttons = [];
             for (const u of users.slice(0, 30)) {
-                userList += `• ${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''} - ${u.chatId} - ${u.status}\n`;
+                const displayName = `${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''}`;
+                buttons.push([{ text: displayName, callback_data: `admin_info_${u.chatId}` }]);
             }
-            if (users.length > 30) {
-                userList += `\n... va yana ${users.length - 30} ta foydalanuvchi`;
-            }
+            buttons.push([{ text: "🔙 Orqaga", callback_data: "admin_panel" }]);
 
-            const buttons = [[{ text: "🔙 Orqaga", callback_data: "admin_panel" }]];
-
-            await safeEdit(chatId, messageId, userList, {
+            await safeEdit(chatId, messageId, "👥 **Barcha foydalanuvchilar:**", {
                 parse_mode: "Markdown",
                 reply_markup: { inline_keyboard: buttons }
             });
@@ -806,20 +855,14 @@ module.exports = (bot) => {
             
             const users = await User.findAll({ where: { status }, order: [['joinedAt', 'DESC']] });
             
-            let userList = `${statusTextMap[status]}:\n\n`;
+            const buttons = [];
             for (const u of users.slice(0, 30)) {
-                userList += `• ${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''} - \`${u.chatId}\`\n`;
+                const displayName = `${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''}`;
+                buttons.push([{ text: displayName, callback_data: `admin_info_${u.chatId}` }]);
             }
-            if (users.length > 30) {
-                userList += `\n... va yana ${users.length - 30} ta foydalanuvchi`;
-            }
-            if (users.length === 0) {
-                userList = `${statusTextMap[status]} ro'yxati bo'sh`;
-            }
+            buttons.push([{ text: "🔙 Orqaga", callback_data: "admin_panel" }]);
 
-            const buttons = [[{ text: "🔙 Orqaga", callback_data: "admin_panel" }]];
-
-            await safeEdit(chatId, messageId, userList, {
+            await safeEdit(chatId, messageId, `👥 **${statusTextMap[status]}:**`, {
                 parse_mode: "Markdown",
                 reply_markup: { inline_keyboard: buttons }
             });

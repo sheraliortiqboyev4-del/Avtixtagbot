@@ -852,6 +852,8 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
         // Function to update status message
         const updateStatus = async (extra = '') => {
             if (!scrapeSessions[chatId] || scrapeSessions[chatId].status === 'stopped') return;
+            const session = scrapeSessions[chatId];
+            if (!session.statusMsg) return;
             
             let text = `⏳ **Userlarni yig'ish jarayoni...**\n\n`;
             text += `📊 O'qilgan xabarlar: ${scannedMessages}\n`;
@@ -862,9 +864,7 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
                 text += `\n\n⚠️ ${extra}`;
             }
             try {
-                await bot.editMessageText(text, {
-                    chat_id: chatId,
-                    message_id: statusMsg.message_id,
+                await bot.editMessageText(text, chatId, session.statusMsg.message_id, {
                     parse_mode: "Markdown",
                     reply_markup: {
                         inline_keyboard: [
@@ -1098,6 +1098,8 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
         // Function to update status message
         const updateStatus = async (extra = '') => {
             if (!scrapeSessions[chatId] || scrapeSessions[chatId].status === 'stopped') return;
+            const session = scrapeSessions[chatId];
+            if (!session.statusMsg) return;
             
             let text = `⏳ **Mention azolarni yig'ish jarayoni...**\n\n`;
             text += `📊 O'qilgan xabarlar: ${scannedMessages}/${historyLimit}\n`;
@@ -1106,9 +1108,7 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
                 text += `\n\n⚠️ ${extra}`;
             }
             try {
-                await bot.editMessageText(text, {
-                    chat_id: chatId,
-                    message_id: statusMsg.message_id,
+                await bot.editMessageText(text, chatId, session.statusMsg.message_id, {
                     parse_mode: "Markdown",
                     reply_markup: {
                         inline_keyboard: [
