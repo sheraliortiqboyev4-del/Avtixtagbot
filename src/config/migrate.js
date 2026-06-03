@@ -37,7 +37,6 @@ const withMigrationRetry = async (fn) => {
 
 module.exports = {
     migrateSchema,
-    migrateUsersTable,
     isMissingColumnError,
     withMigrationRetry
 };
