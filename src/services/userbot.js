@@ -1325,38 +1325,56 @@ const startReyd = async (chatId, target, reydMsg, limit, bot, savedPath = null) 
         throw new Error("Foydalanuvchi topilmadi.");
     }
 
-    const allSessions = [
-        user.session, 
-        ...(user.reydAccounts || []).map(s => s.session)
-    ].filter(Boolean);
+    // Akkauntlarni tayyorlash
+    let sessions = [];
+    let clients = [];
+    const mode = user.reydAccountMode || 'main'; // Default 'main'
 
-    if (allSessions.length === 0) {
-        throw new Error("Reyd uchun asosiy yoki qo'shimcha akkauntlar ulanmagan.");
-    }
+    if (mode === 'main') {
+        // Asosiy akkaunt rejimi — faqat asosiyni ishlatamiz
+        sessions = [user.session];
+        const mainClient = await ensureClient(chatId, bot);
+        clients.push(mainClient);
+    } else if (mode === 'all') {
+        // Barcha akkauntlar rejimi — faqat qo'shimcha akkauntlarni ishlatamiz!
+        const reydAccs = (user.reydAccounts || []).map(acc => acc.session).filter(Boolean);
+        if (reydAccs.length === 0) {
+            // Qo'shimcha akkaunt yo'q bo'lsa xabar beramiz
+            await bot.sendMessage(chatId, "❌ Sizda hech qanday qo'shimcha reyd akkaunti ulanmagan! Iltimos, akkaunt qo'shish uchun botda kerakli bo'limdan foydalaning.");
+            return;
+        }
+        sessions = reydAccs;
 
-    const clients = [];
-    for (let i = 0; i < allSessions.length; i++) {
-        try {
-            const sessionStr = allSessions[i];
-            const tempChatId = `${chatId}_${i}`;
-            const client = new TelegramClient(new StringSession(sessionStr), config.apiId, config.apiHash, { 
-                connectionRetries: 50,
-                requestRetries: 15,
-                timeout: 120000,
-                autoReconnect: true,
-                floodSleepThreshold: 120,
-                useWSS: false,
-                proxy: undefined
-            });
-            await client.connect();
-            if (await client.checkAuthorization()) {
-                userClients[tempChatId] = client;
-                clients.push(client);
-            } else {
-                console.error(`[Reyd] Akkaunt ${i} avtorizatsiyadan o'tolmadi.`);
+        // Faqat qo'shimcha akkauntlarni ulaymiz!
+        for (let i = 0; i < sessions.length; i++) {
+            try {
+                const sessionStr = sessions[i];
+                const tempChatId = `${chatId}_${i}`;
+                const client = new TelegramClient(new StringSession(sessionStr), config.apiId, config.apiHash, { 
+                    connectionRetries: 50,
+                    requestRetries: 15,
+                    timeout: 120000,
+                    autoReconnect: true,
+                    floodSleepThreshold: 120,
+                    useWSS: false,
+                    proxy: undefined
+                });
+                await client.connect();
+                if (await client.checkAuthorization()) {
+                    userClients[tempChatId] = client;
+                    clients.push(client);
+                } else {
+                    console.error(`[Reyd] Akkaunt ${i + 1} (qo'shimcha) avtorizatsiyadan o'tolmadi.`);
+                }
+            } catch (e) {
+                console.error(`[Reyd] Akkaunt ${i + 1} (qo'shimcha) ulanishda xato:`, e.message);
             }
-        } catch (e) {
-            console.error(`[Reyd] Akkaunt ${i} ulanishda xato:`, e.message);
+        }
+
+        // Agar hech qanday qo'shimcha akkaunt ulana olmasak xabar beramiz
+        if (clients.length === 0) {
+            await bot.sendMessage(chatId, "❌ Hech qanday qo'shimcha reyd akkaunti ulana olmadi! Iltimos, akkauntlaringizni tekshiring.");
+            return;
         }
     }
 
@@ -1613,10 +1631,24 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
         status: 'running'
     });
 
-    const sessions = [
-        user.session, 
-        ...(user.reklamaAccounts || []).map(s => s.session)
-    ].filter(Boolean);
+    // Akkauntlarni tayyorlash
+    let sessions = [];
+    let clients = [];
+    const mode = user.reklamaAccountMode || 'main'; // Default 'main'
+
+    if (mode === 'main') {
+        // Asosiy akkaunt rejimi — faqat asosiyni ishlatamiz
+        sessions = [user.session];
+    } else if (mode === 'all') {
+        // Barcha akkauntlar rejimi — faqat qo'shimcha akkauntlarni ishlatamiz!
+        const reklamaAccs = (user.reklamaAccounts || []).map(acc => acc.session).filter(Boolean);
+        if (reklamaAccs.length === 0) {
+            // Qo'shimcha akkaunt yo'q bo'lsa xabar beramiz
+            await bot.sendMessage(chatId, "❌ Sizda hech qanday qo'shimcha reklama akkaunti ulanmagan! Iltimos, akkaunt qo'shish uchun botda kerakli bo'limdan foydalaning.");
+            return;
+        }
+        sessions = reklamaAccs;
+    }
 
     if (sessions.length === 0) {
         throw new Error("Reklama uchun asosiy yoki qo'shimcha akkauntlar ulanmagan.");
@@ -1640,23 +1672,32 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
     const statusMsg = await bot.sendMessage(chatId, `🚀 **Reklama boshlandi!**\nAkkauntlar soni: ${sessions.length}\nUserlar soni: ${users.length}`, getReklamaButtons('running'));
 
     let client = null;
-    const clients = [];
+    // clients array will hold connected clients
 
     const connectClient = async (index) => {
         if (clients[index]) return clients[index];
-        const newClient = new TelegramClient(new StringSession(sessions[index]), config.apiId, config.apiHash, {
-            connectionRetries: 50,
-            requestRetries: 15,
-            timeout: 120000,
-            autoReconnect: true,
-            floodSleepThreshold: 120,
-            useWSS: false,
-            proxy: undefined
-        });
-        await newClient.connect();
-        if (!(await newClient.checkAuthorization())) {
-            throw new Error(`[Reklama] Akkaunt ${index} avtorizatsiyadan o'tolmadi.`);
+        let newClient;
+        
+        if (mode === 'main' && index === 0) {
+            // Asosiy akkaunt uchun ensureClient dan foydalanamiz
+            newClient = await ensureClient(chatId, bot);
+        } else {
+            // Qo'shimcha akkauntlar uchun yangi klient yaratamiz
+            newClient = new TelegramClient(new StringSession(sessions[index]), config.apiId, config.apiHash, {
+                connectionRetries: 50,
+                requestRetries: 15,
+                timeout: 120000,
+                autoReconnect: true,
+                floodSleepThreshold: 120,
+                useWSS: false,
+                proxy: undefined
+            });
+            await newClient.connect();
+            if (!(await newClient.checkAuthorization())) {
+                throw new Error(`[Reklama] Akkaunt ${index} avtorizatsiyadan o'tolmadi.`);
+            }
         }
+        
         clients[index] = newClient;
         reklamaStates[chatId].sessionIndex = index;
         client = newClient;
@@ -1913,20 +1954,26 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
     if (!user) throw new Error("Foydalanuvchi topilmadi.");
 
     // Akkauntlarni tayyorlash
-    const sessions = [user.session];
-    if (user.utagAccountMode === 'all') {
+    let sessions = [];
+    let clients = [];
+
+    if (user.utagAccountMode === 'main') {
+        // Asosiy akkaunt rejimi — faqat asosiyni ishlatamiz
+        sessions = [user.session];
+        const mainClient = await ensureClient(chatId, bot);
+        clients.push(mainClient);
+    } else if (user.utagAccountMode === 'all') {
+        // Barcha akkauntlar rejimi — faqat qo'shimcha akkauntlarni ishlatamiz!
         const rekAccs = (user.reklamaAccounts || []).map(acc => acc.session);
-        sessions.push(...rekAccs);
-    }
+        if (rekAccs.length === 0) {
+            // Qo'shimcha akkaunt yo'q bo'lsa xabar beramiz
+            await bot.sendMessage(chatId, "❌ Sizda hech qanday qo'shimcha akkaunt ulanmagan! Iltimos, akkaunt qo'shish uchun botda kerakli bo'limdan foydalaning.");
+            return;
+        }
+        sessions = rekAccs;
 
-    const clients = [];
-    // Asosiy clientni har doim ishlatamiz (ensureClient orqali ulanadi)
-    const mainClient = await ensureClient(chatId, bot);
-    clients.push(mainClient);
-
-    // Qo'shimcha clientlarni ulash (agar 'all' bo'lsa)
-    if (user.utagAccountMode === 'all' && sessions.length > 1) {
-        for (let i = 1; i < sessions.length; i++) {
+        // Faqat qo'shimcha akkauntlarni ulaymiz!
+        for (let i = 0; i < sessions.length; i++) {
             try {
                 const tempClient = new TelegramClient(new StringSession(sessions[i]), config.apiId, config.apiHash, {
                     connectionRetries: 5,
@@ -1944,8 +1991,14 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
                     clients.push(tempClient);
                 }
             } catch (e) {
-                console.error(`[UTag] Akkaunt ${i} ulanishda xato:`, e.message);
+                console.error(`[UTag] Akkaunt ${i + 1} (qo'shimcha) ulanishda xato:`, e.message);
             }
+        }
+
+        // Agar hech qanday qo'shimcha akkaunt ulana olmasak xabar beramiz
+        if (clients.length === 0) {
+            await bot.sendMessage(chatId, "❌ Hech qanday qo'shimcha akkaunt ulana olmadi! Iltimos, akkauntlaringizni tekshiring.");
+            return;
         }
     }
 

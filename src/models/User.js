@@ -75,6 +75,16 @@ const User = sequelize.define('User', {
         allowNull: true,
         defaultValue: null // null, 'main', or 'all'
     },
+    reydAccountMode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null // null, 'main', or 'all'
+    },
+    reklamaAccountMode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null // null, 'main', or 'all'
+    },
     utagHistory: {
         type: DataTypes.JSON,
         defaultValue: []

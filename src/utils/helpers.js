@@ -419,11 +419,13 @@ function getUtagMenu(accountMode = 'main', rekCount = 0) {
     };
 }
 
-function getReklamaMenu(accountsCount = 0) {
+function getReklamaMenu(accountMode = 'main', accountsCount = 0) {
+    const modeText = accountMode === 'all' ? "🌐 Barcha akkauntlar" : "👤 Faqat asosiy";
     return {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "🚀 Reklama boshlash", callback_data: "reklama_start" }],
+                [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "reklama_change_mode" }],
                 [{ text: `➕ Akkaunt qo'shish (${accountsCount}/10)`, callback_data: "reklama_add_acc" }],
                 [{ text: "🗑 Akkauntlarni tozalash", callback_data: "reklama_clear_acc" }],
                 [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
@@ -432,11 +434,13 @@ function getReklamaMenu(accountsCount = 0) {
     };
 }
 
-function getReydMenu(accountsCount = 0) {
+function getReydMenu(accountMode = 'main', accountsCount = 0) {
+    const modeText = accountMode === 'all' ? "🌐 Barcha akkauntlar" : "👤 Faqat asosiy";
     return {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "🚀 Reyd boshlash", callback_data: "reyd_start" }],
+                [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "reyd_change_mode" }],
                 [{ text: `➕ Akkaunt qo'shish (${accountsCount}/10)`, callback_data: "reyd_add_acc" }],
                 [{ text: "🗑 Akkauntlarni tozalash", callback_data: "reyd_clear_acc" }],
                 [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]

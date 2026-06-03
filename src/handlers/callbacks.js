@@ -218,13 +218,47 @@ module.exports = (bot) => {
 
         if (data === "menu_reyd") {
             const { getReydMenu } = require('../utils/helpers');
+            const mode = user.reydAccountMode || 'main';
             const accCount = user.reydAccounts ? user.reydAccounts.length : 0;
+            const modeText = mode === 'all' ? "Barcha akkauntlar" : "Faqat asosiy akkaunt";
+            const text = `⚔️ **Reyd bo'limi**\n\n⚙️ Hozirgi rejim: **${modeText}**\n👥 Akkauntlar: **${accCount + 1} ta**\n\nSiz bir nechta akkaunt ulab, reydni yanada tezroq va samaraliroq amalga oshirishingiz mumkin. Akkauntlar navbatma-navbat xabar yuboradi.`;
             
-            await safeEdit(chatId, messageId, "⚔️ **Reyd bo'limi**\n\nSiz bir nechta akkaunt ulab, reydni yanada tezroq va samaraliroq amalga oshirishingiz mumkin. Akkauntlar navbatma-navbat xabar yuboradi.", {
+            await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
-                ...getReydMenu(accCount)
+                ...getReydMenu(mode, accCount)
             });
             return await safeAnswer();
+        }
+
+        if (data === "reyd_change_mode") {
+            const currentMode = user.reydAccountMode || 'main';
+            const newMode = currentMode === 'all' ? 'main' : 'all';
+            await User.update({ reydAccountMode: newMode }, { where: { chatId } });
+            
+            const { getReydMenu } = require('../utils/helpers');
+            const accCount = user.reydAccounts ? user.reydAccounts.length : 0;
+            const modeText = newMode === 'all' ? "Barcha akkauntlar" : "Faqat asosiy akkaunt";
+            const text = `⚔️ **Reyd bo'limi**\n\n⚙️ Hozirgi rejim: **${modeText}**\n👥 Akkauntlar: **${accCount + 1} ta**\n\nSiz bir nechta akkaunt ulab, reydni yanada tezroq va samaraliroq amalga oshirishingiz mumkin. Akkauntlar navbatma-navbat xabar yuboradi.`;
+            
+            await safeEdit(chatId, messageId, text, {
+                parse_mode: "Markdown",
+                ...getReydMenu(newMode, accCount)
+            });
+            return await safeAnswer({ text: `Rejim o'zgartirildi: ${modeText}` });
+        }
+
+        if (data.startsWith("reyd_set_mode_")) {
+            const mode = data.replace('reyd_set_mode_', ''); // main or all
+            await User.update({ reydAccountMode: mode }, { where: { chatId } });
+            await safeAnswer({ text: `Rejim eslab qolindi: ${mode === 'all' ? 'Barcha akkauntlar' : 'Faqat asosiy'}` });
+            
+            const { getGroupPickerKeyboard, REYD_CHAT_REQUEST_ID } = require('../utils/helpers');
+            global.userStates[chatId] = { step: 'WAITING_REYD_TARGET' };
+            bot.sendMessage(chatId, "⚔️ Reyd qilinadigan guruh linki yoki usernameni yuboring:", {
+                reply_markup: getGroupPickerKeyboard(REYD_CHAT_REQUEST_ID)
+            });
+            try { await bot.deleteMessage(chatId, messageId); } catch(e) {}
+            return;
         }
 
         if (data === "reyd_add_acc") {
@@ -249,6 +283,19 @@ module.exports = (bot) => {
         }
 
         if (data === "reyd_start") {
+            if (!user.reydAccountMode) {
+                const text = "🛠 **Reyd rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
+                const buttons = [
+                    [{ text: "👤 Faqat asosiy akkaunt", callback_data: "reyd_set_mode_main" }],
+                    [{ text: "🌐 Barcha akkauntlar", callback_data: "reyd_set_mode_all" }],
+                    [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
+                ];
+                await safeEdit(chatId, messageId, text, {
+                    parse_mode: "Markdown",
+                    reply_markup: { inline_keyboard: buttons }
+                });
+                return await safeAnswer();
+            }
             const { getGroupPickerKeyboard, REYD_CHAT_REQUEST_ID } = require('../utils/helpers');
             global.userStates[chatId] = { step: 'WAITING_REYD_TARGET' };
             bot.sendMessage(chatId, "⚔️ Reyd qilinadigan guruh linki yoki usernameni yuboring:", {
@@ -259,13 +306,44 @@ module.exports = (bot) => {
 
         if (data === "menu_reklama") {
             const { getReklamaMenu } = require('../utils/helpers');
+            const mode = user.reklamaAccountMode || 'main';
             const accCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
+            const modeText = mode === 'all' ? "Barcha akkauntlar" : "Faqat asosiy akkaunt";
+            const text = `🚀 **Reklama bo'limi**\n\n⚙️ Hozirgi rejim: **${modeText}**\n👥 Akkauntlar: **${accCount + 1} ta**\n\nSiz bir nechta akkaunt ulab, reklamani yanada ko'proq odamga yuborishingiz mumkin. Akkaunt spamga tushsa, bot avtomatik keyingisiga o'tadi.`;
             
-            await safeEdit(chatId, messageId, "🚀 **Reklama bo'limi**\n\nSiz bir nechta akkaunt ulab, reklamani yanada ko'proq odamga yuborishingiz mumkin. Akkaunt spamga tushsa, bot avtomatik keyingisiga o'tadi.", {
+            await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
-                ...getReklamaMenu(accCount)
+                ...getReklamaMenu(mode, accCount)
             });
             return await safeAnswer();
+        }
+
+        if (data === "reklama_change_mode") {
+            const currentMode = user.reklamaAccountMode || 'main';
+            const newMode = currentMode === 'all' ? 'main' : 'all';
+            await User.update({ reklamaAccountMode: newMode }, { where: { chatId } });
+            
+            const { getReklamaMenu } = require('../utils/helpers');
+            const accCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
+            const modeText = newMode === 'all' ? "Barcha akkauntlar" : "Faqat asosiy akkaunt";
+            const text = `🚀 **Reklama bo'limi**\n\n⚙️ Hozirgi rejim: **${modeText}**\n👥 Akkauntlar: **${accCount + 1} ta**\n\nSiz bir nechta akkaunt ulab, reklamani yanada ko'proq odamga yuborishingiz mumkin. Akkaunt spamga tushsa, bot avtomatik keyingisiga o'tadi.`;
+            
+            await safeEdit(chatId, messageId, text, {
+                parse_mode: "Markdown",
+                ...getReklamaMenu(newMode, accCount)
+            });
+            return await safeAnswer({ text: `Rejim o'zgartirildi: ${modeText}` });
+        }
+
+        if (data.startsWith("reklama_set_mode_")) {
+            const mode = data.replace('reklama_set_mode_', ''); // main or all
+            await User.update({ reklamaAccountMode: mode }, { where: { chatId } });
+            await safeAnswer({ text: `Rejim eslab qolindi: ${mode === 'all' ? 'Barcha akkauntlar' : 'Faqat asosiy'}` });
+            
+            global.userStates[chatId] = { step: 'WAITING_REK_USERS' };
+            bot.sendMessage(chatId, "🚀 **Foydalanuvchilarning username ro'yxatini yuboring :**");
+            try { await bot.deleteMessage(chatId, messageId); } catch(e) {}
+            return;
         }
 
         if (data === "reklama_add_acc") {
@@ -290,6 +368,19 @@ module.exports = (bot) => {
         }
 
         if (data === "reklama_start") {
+            if (!user.reklamaAccountMode) {
+                const text = "🛠 **Reklama rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
+                const buttons = [
+                    [{ text: "👤 Faqat asosiy akkaunt", callback_data: "reklama_set_mode_main" }],
+                    [{ text: "🌐 Barcha akkauntlar", callback_data: "reklama_set_mode_all" }],
+                    [{ text: "🔙 Orqaga", callback_data: "menu_reklama" }]
+                ];
+                await safeEdit(chatId, messageId, text, {
+                    parse_mode: "Markdown",
+                    reply_markup: { inline_keyboard: buttons }
+                });
+                return await safeAnswer();
+            }
             global.userStates[chatId] = { step: 'WAITING_REK_USERS' };
             bot.sendMessage(chatId, "🚀 **Foydalanuvchilarning username ro'yxatini yuboring :**");
             return await safeAnswer();
