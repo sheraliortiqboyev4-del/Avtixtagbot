@@ -123,7 +123,7 @@ const startUserbot = async (chatId, sessionStr, bot) => {
             try { await userClients[chatId].disconnect(); } catch (e) {}
         }
 
-        const clientOpts = getGramJsClientParams(config.authUseWss !== false, { forAuth: false });
+        const clientOpts = getGramJsClientParams(true, { forAuth: false }); // Always use WSS
         if (config.telegramProxy?.host) {
             clientOpts.proxy = {
                 ip: config.telegramProxy.host,
@@ -133,10 +133,16 @@ const startUserbot = async (chatId, sessionStr, bot) => {
             };
         }
         const client = new TelegramClient(new StringSession(sessionStr), config.apiId, config.apiHash, clientOpts);
-        await client.connect(); 
-        userClients[chatId] = client; 
-
-        console.log("Userbot " + chatId + " uchun ishga tushdi."); 
+        
+        // Don't crash the whole bot if one userbot fails to connect
+        try {
+            await client.connect(); 
+            userClients[chatId] = client; 
+            console.log("✅ Userbot " + chatId + " uchun ishga tushdi."); 
+        } catch (connectError) {
+            console.error(`❌ Userbot ${chatId} ulanishda xato:`, connectError.message);
+            return;
+        }
     
         // Default holat: Bazadan olish 
         if (avtoAlmazStates[chatId] === undefined) { 
@@ -144,13 +150,23 @@ const startUserbot = async (chatId, sessionStr, bot) => {
             avtoAlmazStates[chatId] = user && user.avtoAlmaz !== undefined ? user.avtoAlmaz : true; 
         } 
 
-        // Ulanish holatini kuzatish
+        // Ulanish holatini kuzatish (butun botni chalg'itmaslik uchun)
         client.on('disconnected', () => {
-            console.log(`[GramJS] User ${chatId} ulanish uzildi. Qayta ulanish kutilmoqda...`);
+            console.log(`ℹ️ Userbot ${chatId} ulanish uzildi. Qayta ulanish kutilmoqda...`);
         });
         
         client.on('reconnected', () => {
-            console.log(`[GramJS] User ${chatId} muvaffaqiyatli qayta ulandi.`);
+            console.log(`✅ Userbot ${chatId} qayta ulandi.`);
+        });
+        
+        // GramJS WebSocket timeout xatolarini suppress qilamiz (avtomatik qayta ulanish bor)
+        client.on('error', (err) => {
+            const msg = err?.message || '';
+            if (msg.includes('ETIMEDOUT') || msg.includes('WebSocket') || msg.includes('Connection')) {
+                console.log(`ℹ️ Userbot ${chatId}: Ulanish bilan bog'liq muammo (avtomatik tiklanadi)`);
+            } else if (!msg.includes('FLOOD')) {
+                console.error(`⚠️ Userbot ${chatId} xatosi:`, msg);
+            }
         });        
 
         // --- YANGI: XABARLARNI ESHITISH (Bot guruhda bo'lmasa ham ishlashi uchun) ---
@@ -435,18 +451,18 @@ const blockExpiredUser = async (user, bot, options = {}) => {
 const authErrMsg = (err) => err?.message || err?.errorMessage || String(err);
 
 const getGramJsClientParams = (useWSS, { forAuth = false } = {}) => ({
-    connectionRetries: 50,
-    requestRetries: 15,
-    timeout: 120000,
+    connectionRetries: forAuth ? 10 : 5, // Fewer retries for regular userbots
+    requestRetries: 3,
+    timeout: forAuth ? 120000 : 30000, // Shorter timeout for regular use
     autoReconnect: !forAuth,
     floodSleepThreshold: forAuth ? 120 : 300,
-    receiveUpdates: false,
+    receiveUpdates: false, // Never receive updates for userbots (faster & lighter)
     deviceModel: config.tgDeviceModel,
     systemVersion: config.tgSystemVersion,
     appVersion: config.tgAppVersion,
     langCode: 'en',
     systemLangCode: 'en-US',
-    useWSS,
+    useWSS: true, // ALWAYS use WSS (port 443) for better Render compatibility
     useIPV6: false
 });
 
@@ -864,7 +880,9 @@ const scrapeUsers = async (chatId, groupLink, limit = 1000, bot) => {
                 text += `\n\n⚠️ ${extra}`;
             }
             try {
-                await bot.editMessageText(text, chatId, session.statusMsg.message_id, {
+                await bot.editMessageText(text, {
+                    chat_id: chatId,
+                    message_id: session.statusMsg.message_id,
                     parse_mode: "Markdown",
                     reply_markup: {
                         inline_keyboard: [
@@ -1108,7 +1126,9 @@ const scrapeMentionUsers = async (chatId, groupLink, historyLimit = 1000000, bot
                 text += `\n\n⚠️ ${extra}`;
             }
             try {
-                await bot.editMessageText(text, chatId, session.statusMsg.message_id, {
+                await bot.editMessageText(text, {
+                    chat_id: chatId,
+                    message_id: session.statusMsg.message_id,
                     parse_mode: "Markdown",
                     reply_markup: {
                         inline_keyboard: [
