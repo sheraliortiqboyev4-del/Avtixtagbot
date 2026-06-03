@@ -53,13 +53,6 @@ module.exports = (bot) => {
         const name = msg.from.first_name; 
         const username = msg.from.username;
 
-        // Check if active scrape is running first!
-        const { scrapeSessions } = require('../services/userbot');
-        if (scrapeSessions[chatId]) {
-            await bot.sendMessage(chatId, "⏳ Foydalanuvchilarni yig'ish jarayoni davom etmoqda! Tugaguncha kuting yoki \"To'xtatish\" tugmasini bosing.");
-            return;
-        }
-
         if (!getDbReady()) {
             return bot.sendMessage(chatId, '⏳ Bot hali yuklanmoqda. Iltimos, 10 soniyadan keyin qayta /start bosing.');
         }
@@ -158,14 +151,6 @@ module.exports = (bot) => {
 
     bot.onText(/\/menu/, async (msg) => {
         const chatId = msg.chat.id;
-        
-        // Check if active scrape is running!
-        const { scrapeSessions } = require('../services/userbot');
-        if (scrapeSessions[chatId]) {
-            await bot.sendMessage(chatId, "⏳ Foydalanuvchilarni yig'ish jarayoni davom etmoqda! Tugaguncha kuting yoki \"To'xtatish\" tugmasini bosing.");
-            return;
-        }
-        
         const isMember = await checkMembership(bot, chatId);
         if (!isMember) return sendSubscriptionAsk(bot, chatId);
 
