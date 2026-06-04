@@ -175,20 +175,16 @@ const initAuth = async (chatId, phoneNumber, bot, isAdditional = false, isReyd =
     };
 
     const hint = getCodeDeliveryHint(isCodeViaApp);
-    const isSms = isCodeViaApp === false;
-    const keyboard = isSms
-        ? { inline_keyboard: [[{ text: '🔄 SMS qayta yuborish', callback_data: 'auth_resend_sms' }]] }
-        : {
-            inline_keyboard: [
-                [{ text: '📱 SMS orqali yuborish', callback_data: 'auth_resend_sms' }],
-                [{ text: '🔄 Kodni qayta so\'rash', callback_data: 'auth_resend_app' }]
-            ]
-        };
+    const keyboard = {
+        inline_keyboard: [
+            [{ text: '🔄 Kodni qayta so\'rash', callback_data: 'auth_resend_app' }]
+        ]
+    };
 
     await bot.sendMessage(
         chatId,
         `📩 **Kirish kodi yuborildi.**\n\n${hint}\n\n` +
-        `Kodni shu yerga kiriting **(Masalan: \`12.345\`)**\n\n` +
+        `Kodni shu yerga kiriting **(Masalan: \`12345\`)**\n\n` +
         `_Kod kelmasa pastdagi tugmani bosing._`,
         { parse_mode: "Markdown", reply_markup: keyboard }
     );
@@ -205,11 +201,7 @@ const resendAuthCode = async (chatId, bot, viaSms = false) => {
     let phoneCodeHash;
     let isCodeViaApp;
 
-    if (viaSms) {
-        const result = await requestAuthCode(auth.client, auth.phoneNumber, true);
-        phoneCodeHash = result.phoneCodeHash;
-        isCodeViaApp = result.isCodeViaApp;
-    } else {
+    try {
         const sentCode = await auth.client.invoke(new Api.auth.ResendCode({
             phoneNumber: auth.phoneNumber,
             phoneCodeHash: auth.phoneCodeHash
@@ -219,12 +211,28 @@ const resendAuthCode = async (chatId, bot, viaSms = false) => {
         }
         phoneCodeHash = sentCode.phoneCodeHash;
         isCodeViaApp = sentCode.type instanceof Api.auth.SentCodeTypeApp;
+    } catch (err) {
+        const msg = authErrMsg(err);
+        // Telegram ba'zan kodni qayta yuborishga ruxsat bermaydi
+        if (msg.includes('SEND_CODE_UNAVAILABLE') || msg.includes('RESEND')) {
+            throw new Error("Kodni qayta yuborib bo'lmadi. Kod allaqachon yuborilgan — Telegram ilovangizni tekshiring.");
+        }
+        if (msg.includes('FLOOD') || msg.includes('A wait of')) {
+            const sec = msg.match(/\d+/)?.[0] || '?';
+            throw new Error(`Telegram cheklovi: ${sec} soniya kuting.`);
+        }
+        if (msg.includes('PHONE_CODE_EXPIRED')) {
+            await cleanupAuthClient(chatId);
+            delete global.userStates[chatId];
+            throw new Error("Kod muddati tugagan. /start bosing.");
+        }
+        throw new Error(msg);
     }
 
     auth.phoneCodeHash = phoneCodeHash;
     auth.isCodeViaApp = isCodeViaApp;
     auth.step = 'WAITING_CODE';
-    console.log(`[Auth] Resend: ${auth.phoneNumber}, sms=${viaSms}, viaApp=${isCodeViaApp}`);
+    console.log(`[Auth] Resend: ${auth.phoneNumber}, viaApp=${isCodeViaApp}`);
 
     const hint = getCodeDeliveryHint(isCodeViaApp);
     await bot.sendMessage(chatId, `🔄 **Kod qayta yuborildi.**\n\n${hint}`, { parse_mode: "Markdown" });

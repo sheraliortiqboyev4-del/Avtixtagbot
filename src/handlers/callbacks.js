@@ -22,11 +22,11 @@ const STATUS_ICON = { approved: '✅', pending: '⏳', blocked: '🚫' };
 const formatUserRow = (u) => {
     const icon = STATUS_ICON[u.status] || '⏳';
     const namePart = u.username
-        ? `**${u.name || "Noma'lum"}** (@${u.username}) ${icon}`
-        : `**${u.name || "Noma'lum"}** ${icon}`;
+        ? `${u.name || "Noma'lum"} (@${u.username}) ${icon}`
+        : `${u.name || "Noma'lum"} ${icon}`;
     const joined = u.joinedAt ? new Date(u.joinedAt) : new Date();
     const dateStr = `${joined.getFullYear()}-${String(joined.getMonth() + 1).padStart(2, '0')}-${String(joined.getDate()).padStart(2, '0')} ${String(joined.getHours()).padStart(2, '0')}:${String(joined.getMinutes()).padStart(2, '0')}`;
-    return `👤 ${namePart}\n🆔 \`${u.chatId}\` | /info_${u.chatId}\n📅 ${dateStr}`;
+    return `👤 ${namePart}\n🆔 ${u.chatId} | /info_${u.chatId}\n📅 ${dateStr}`;
 };
 
 // Sahifalangan ro'yxat matni va tugmalarini tayyorlash
@@ -36,7 +36,7 @@ const buildUserListPage = (users, page, title, backCallback) => {
     const start = safePage * ADMIN_LIST_PAGE_SIZE;
     const pageUsers = users.slice(start, start + ADMIN_LIST_PAGE_SIZE);
 
-    let text = `👥 **${title}:** (Sahifa ${safePage + 1}/${totalPages})\n\n`;
+    let text = `👥 ${title}: (Sahifa ${safePage + 1}/${totalPages})\n\n`;
     if (pageUsers.length === 0) {
         text += "Hozircha hech kim yo'q.";
     } else {
@@ -49,7 +49,7 @@ const buildUserListPage = (users, page, title, backCallback) => {
 
     const keyboard = [];
     if (navRow.length > 0) keyboard.push(navRow);
-    keyboard.push([{ text: "🔙 Admin Panel", callback_data: "admin_panel" }]);
+    keyboard.push([{ text: "🏠 Admin Panel", callback_data: "admin_panel" }]);
 
     return { text, reply_markup: { inline_keyboard: keyboard } };
 };
@@ -114,13 +114,11 @@ module.exports = (bot) => {
             }
         }
 
-        if (data === "auth_resend_sms" || data === "auth_resend_app") {
+        if (data === "auth_resend_app" || data === "auth_resend_sms") {
             const { resendAuthCode } = require('../services/userbot');
             try {
-                await resendAuthCode(chatId, bot, data === "auth_resend_sms");
-                return await safeAnswer({
-                    text: data === "auth_resend_sms" ? "SMS yuborildi" : "Kod qayta yuborildi"
-                });
+                await resendAuthCode(chatId, bot, false);
+                return await safeAnswer({ text: "Kod qayta so'raldi" });
             } catch (e) {
                 return await safeAnswer({ text: e.message, show_alert: true });
             }
@@ -962,7 +960,7 @@ module.exports = (bot) => {
             const { text, reply_markup } = buildUserListPage(users, page, "Barcha A'zolar", "admin_all_users");
 
             await safeEdit(chatId, messageId, text, {
-                parse_mode: "Markdown",
+                skipEmojiWrap: true,
                 reply_markup
             });
             return await safeAnswer();
@@ -994,7 +992,7 @@ module.exports = (bot) => {
             const { text, reply_markup } = buildUserListPage(users, page, statusTextMap[status], base);
 
             await safeEdit(chatId, messageId, text, {
-                parse_mode: "Markdown",
+                skipEmojiWrap: true,
                 reply_markup
             });
             return await safeAnswer();

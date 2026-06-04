@@ -180,10 +180,20 @@ bot.sendMessage = async (chatId, text, options = {}, retryCount = 0) => {
 
 const baseEditMessageText = bot.editMessageText.bind(bot);
 bot.editMessageText = async (text, options = {}, retryCount = 0) => {
+    const { skipEmojiWrap, ...editOptions } = options;
     try {
         if (!text) return;
+
+        // Premium emoji o'rashni o'tkazib yuborish (oddiy matn sifatida yuborish)
+        if (skipEmojiWrap) {
+            const plainOptions = { ...editOptions };
+            delete plainOptions.parse_mode;
+            delete plainOptions.entities;
+            return await baseEditMessageText(text, plainOptions);
+        }
+
         const { cleanText, entities } = withPremiumEmojis(text);
-        let finalOptions = { ...options };
+        let finalOptions = { ...editOptions };
         let finalText = text;
 
         if (entities && entities.length > 0) {
@@ -209,7 +219,7 @@ bot.editMessageText = async (text, options = {}, retryCount = 0) => {
         if (error.message.includes('ENTITY_CUSTOM_EMOJI_FORBIDDEN') && retryCount < 2) {
             const { cleanText, entities } = withPremiumEmojis(text);
             const standardEntities = entities.filter(e => e.type !== 'custom_emoji');
-            return await baseEditMessageText(cleanText, { ...options, entities: standardEntities, parse_mode: undefined });
+            return await baseEditMessageText(cleanText, { ...editOptions, entities: standardEntities, parse_mode: undefined });
         }
         
         console.error(`❌ [bot.editMessageText Error]:`, error.message);
@@ -217,7 +227,7 @@ bot.editMessageText = async (text, options = {}, retryCount = 0) => {
         if (retryCount === 0) {
             try {
                 const safeText = text.toString().replace(/[_*`]/g, '');
-                const fallbackOptions = { ...options };
+                const fallbackOptions = { ...editOptions };
                 delete fallbackOptions.parse_mode;
                 delete fallbackOptions.entities;
                 return await baseEditMessageText(safeText, fallbackOptions);
