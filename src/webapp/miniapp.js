@@ -74,9 +74,17 @@ function authMiddleware(req, res, next) {
  * @param {object} bot - telegram bot instance (hozircha shart emas, kelajak uchun)
  */
 function setupMiniApp(app, bot) {
-    // Statik fayllar (public/ papkasi) — Mini App UI
-    app.use('/app', express.static(path.join(__dirname, '../../public')));
     app.use(express.json());
+
+    const publicDir = path.join(__dirname, '../../public');
+
+    // Mini App sahifasi — /app va /app/ ikkalasida ham index.html ochiladi
+    app.get(['/app', '/app/'], (req, res) => {
+        res.sendFile(path.join(publicDir, 'index.html'));
+    });
+
+    // Statik fayllar (style.css, app.js)
+    app.use('/app', express.static(publicDir));
 
     // Foydalanuvchi holatini qaytarish (faqat o'qish)
     app.post('/api/state', authMiddleware, async (req, res) => {

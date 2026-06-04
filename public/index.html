@@ -5,58 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AvtoClick Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/app/style.css">
 </head>
 <body>
     <div id="app">
         <header class="hero">
-            <div class="hero-icon">🚀</div>
-            <h1>AvtoClick <span>Pro</span></h1>
+            <h1>🚀 AvtoClick <span>Pro</span></h1>
             <p id="welcome">Yuklanmoqda...</p>
         </header>
 
-        <section id="statusCard" class="card hidden">
-            <div class="row">
-                <span class="label">🔰 Holat</span>
-                <span id="userStatus" class="value">—</span>
-            </div>
-            <div class="row">
-                <span class="label">⏰ Tarif</span>
-                <span id="userTarif" class="value">—</span>
-            </div>
-            <div class="row">
-                <span class="label">⏳ Muddat</span>
-                <span id="userExpire" class="value">—</span>
-            </div>
+        <!-- Statistika paneli -->
+        <section id="statsCard" class="stats-panel hidden">
+            <div class="stat-row"><span>📂 Yig'ilgan userlar</span><b id="stUsers">0</b></div>
+            <div class="stat-row"><span>⚔️ Reydlar</span><b id="stReyd">0</b></div>
+            <div class="stat-row"><span>📣 Reklamalar</span><b id="stAds">0</b></div>
+            <div class="stat-row"><span>🏷 Utaglar</span><b id="stUtag">0</b></div>
+            <div class="stat-row"><span>💎 Olmoslar</span><b id="stClicks">0</b></div>
+            <div class="stat-divider"></div>
+            <div class="stat-row"><span>🔰 Holat</span><b id="userStatus">—</b></div>
+            <div class="stat-row"><span>⏰ Tarif</span><b id="userTarif">—</b></div>
+            <div class="stat-row"><span>⏳ Muddat</span><b id="userExpire">—</b></div>
         </section>
 
-        <section id="almazCard" class="card hidden">
-            <div class="card-head">
-                <span class="card-title">💎 Avto Almaz</span>
-                <label class="switch">
-                    <input type="checkbox" id="almazToggle">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <p class="muted">Guruhlarga yuborilgan almaz va pullarni avtomatik yig'adi.</p>
-            <div id="almazState" class="badge">—</div>
+        <!-- Funksiya tugmalari (ON/OFF) -->
+        <section id="featureGrid" class="grid hidden">
+            <button class="btn-toggle" data-key="avtoAlmaz"><span class="ic">💎</span><span class="state on">🟢 ON</span></button>
+            <button class="btn-toggle" data-key="autoUser"><span class="ic">📂</span><span class="state on">🟢 ON</span></button>
+            <button class="btn-toggle" data-key="reyd"><span class="ic">⚔️</span><span class="state on">🟢 ON</span></button>
+            <button class="btn-toggle" data-key="reklama"><span class="ic">📣</span><span class="state on">🟢 ON</span></button>
+            <button class="btn-toggle" data-key="utag"><span class="ic">🏷</span><span class="state on">🟢 ON</span></button>
         </section>
 
-        <section id="statsGrid" class="grid hidden">
-            <div class="stat"><div class="stat-num" id="stClicks">0</div><div class="stat-lbl">💎 Almaz</div></div>
-            <div class="stat"><div class="stat-num" id="stReyd">0</div><div class="stat-lbl">⚔️ Reyd</div></div>
-            <div class="stat"><div class="stat-num" id="stUsers">0</div><div class="stat-lbl">👥 User</div></div>
-            <div class="stat"><div class="stat-num" id="stAds">0</div><div class="stat-lbl">📣 Reklama</div></div>
-            <div class="stat"><div class="stat-num" id="stUtag">0</div><div class="stat-lbl">🏷 Utag</div></div>
+        <!-- PRO tugmalar -->
+        <section class="grid">
+            <button class="btn-pro">👑 PRO obuna</button>
+            <button class="btn-pro">⭐ Pro guruhlar</button>
         </section>
 
-        <section id="notReg" class="card hidden">
-            <p>⚠️ Siz hali botga kirmagansiz. Iltimos, botda <b>/start</b> bosing.</p>
+        <!-- Oddiy tugmalar -->
+        <section class="grid">
+            <button class="btn-dark" data-cmd="profile">📊 Profil</button>
+            <button class="btn-dark" data-cmd="help">🧾 Yordam</button>
+        </section>
+        <section class="grid">
+            <button class="btn-dark btn-wide" data-cmd="admin">👨‍💻 Admin Panel</button>
+        </section>
+
+        <section id="notReg" class="stats-panel hidden">
+            <p>⚠️ Siz hali botga kirmagansiz. Botda <b>/start</b> bosing.</p>
         </section>
 
         <div id="toast" class="toast hidden"></div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="/app/app.js"></script>
 </body>
 </html>

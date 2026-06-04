@@ -5,6 +5,7 @@ const initData = tg?.initData || '';
 if (tg) {
     tg.ready();
     tg.expand();
+    try { tg.setHeaderColor('#17212b'); tg.setBackgroundColor('#17212b'); } catch (e) {}
 }
 
 const $ = (id) => document.getElementById(id);
@@ -17,15 +18,16 @@ function toast(msg) {
 }
 
 async function api(path, body = {}) {
-    const res = await fetch(path, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData
-        },
-        body: JSON.stringify({ initData, ...body })
-    });
-    return res.json();
+    try {
+        const res = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData },
+            body: JSON.stringify({ initData, ...body })
+        });
+        return await res.json();
+    } catch (e) {
+        return { ok: false, error: 'Ulanish xatosi' };
+    }
 }
 
 function fmtExpire(expireAt) {
@@ -37,11 +39,10 @@ function fmtExpire(expireAt) {
     return `${d} kun ${h} soat`;
 }
 
-function renderAlmaz(enabled) {
-    $('almazToggle').checked = enabled;
-    const badge = $('almazState');
-    badge.textContent = enabled ? '🟢 Yoqilgan' : '🔴 O\'chirilgan';
-    badge.className = 'badge ' + (enabled ? 'on' : 'off');
+function setToggle(btn, on) {
+    btn.classList.toggle('off', !on);
+    const st = btn.querySelector('.state');
+    st.textContent = on ? '🟢 ON' : '🔴 OFF';
 }
 
 async function load() {
@@ -68,26 +69,48 @@ async function load() {
     $('stAds').textContent = s.adsCount || 0;
     $('stUtag').textContent = s.utagCount || 0;
 
-    $('statusCard').classList.remove('hidden');
-    $('statsGrid').classList.remove('hidden');
+    $('statsCard').classList.remove('hidden');
+    $('featureGrid').classList.remove('hidden');
 
-    if (s.hasSession) {
-        renderAlmaz(s.avtoAlmaz);
-        $('almazCard').classList.remove('hidden');
-    }
+    // Avto Almaz haqiqiy holati
+    const almazBtn = document.querySelector('[data-key="avtoAlmaz"]');
+    setToggle(almazBtn, !!s.avtoAlmaz);
 }
 
-$('almazToggle').addEventListener('change', async (e) => {
-    const enabled = e.target.checked;
-    const data = await api('/api/almaz', { enabled });
-    if (data.ok) {
-        renderAlmaz(data.avtoAlmaz);
-        toast(data.avtoAlmaz ? 'Avto Almaz yoqildi' : 'Avto Almaz o\'chirildi');
+// Faqat Avto Almaz backend bilan ishlaydi; qolganlari namoyish
+document.querySelectorAll('.btn-toggle').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
         tg?.HapticFeedback?.impactOccurred('light');
-    } else {
-        e.target.checked = !enabled; // qaytarish
-        toast(data.error || 'Xatolik');
-    }
+
+        if (key === 'avtoAlmaz') {
+            const turningOn = btn.classList.contains('off');
+            const data = await api('/api/almaz', { enabled: turningOn });
+            if (data.ok) {
+                setToggle(btn, data.avtoAlmaz);
+                toast(data.avtoAlmaz ? 'Avto Almaz yoqildi' : 'Avto Almaz o\'chirildi');
+            } else {
+                toast(data.error || 'Xatolik');
+            }
+        } else {
+            // Boshqa funksiyalar bot chatida ishga tushiriladi
+            toast('Bu funksiyani bot chatidan ishga tushiring');
+        }
+    });
+});
+
+document.querySelectorAll('[data-cmd]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        tg?.HapticFeedback?.impactOccurred('light');
+        toast('Bot chatidagi menyudan foydalaning');
+    });
+});
+
+document.querySelectorAll('.btn-pro').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        tg?.HapticFeedback?.impactOccurred('light');
+        toast('Tez kunda...');
+    });
 });
 
 load();

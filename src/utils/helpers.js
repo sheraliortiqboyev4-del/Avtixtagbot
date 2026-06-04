@@ -361,10 +361,12 @@ function getMainMenu(chatId) {
         [{ text: "🔄 Nomer almashtirish", callback_data: "menu_logout" }]
     ];
 
-    // Mini App tugmasi — faqat WEBAPP_URL sozlangan bo'lsa qo'shiladi
-    const webAppUrl = process.env.WEBAPP_URL
-        || (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/app` : null);
-    if (webAppUrl) {
+    // Mini App tugmasi — faqat WEBAPP_URL/RENDER_EXTERNAL_URL sozlangan bo'lsa qo'shiladi
+    const rawUrl = process.env.WEBAPP_URL || process.env.RENDER_EXTERNAL_URL || null;
+    if (rawUrl) {
+        let base = rawUrl.replace(/\/+$/, '');
+        // Har doim /app sahifasiga yo'naltiramiz (root "Bot is running" chiqmasligi uchun)
+        const webAppUrl = base.endsWith('/app') ? base : `${base}/app`;
         rows.push([{ text: "🎨 Ilovani ochish", web_app: { url: webAppUrl } }]);
     }
 
