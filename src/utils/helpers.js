@@ -12,7 +12,7 @@ const { Api } = require("telegram");
  * @param {number} messageId
  * @param {string} emoji - reaksiya emojisi (masalan: '👍', '🔥', '❤')
  */
-const reactToMessage = async (chatId, messageId, emoji = '👍') => {
+const reactToMessage = async (chatId, messageId, emoji = '❤') => {
     if (!config.botToken || !messageId) return false;
     try {
         await axios.post(
@@ -354,15 +354,25 @@ function getMainMenu(chatId) {
         ? [{ text: "👨‍💻 Admin Panel", callback_data: "admin_panel" }]
         : [{ text: "🧾 Yordam", callback_data: "menu_help" }];
 
+    const rows = [
+        [{ text: "💎 Avto Almaz", callback_data: "menu_almaz" }, { text: "🏷 Avto UTag", callback_data: "menu_utag" }],
+        [{ text: "👤 AvtoUser", callback_data: "menu_avtouser" }, { text: "⚔️ Avto Reyd", callback_data: "menu_reyd" }],
+        [{ text: "📣 Avto Reklama", callback_data: "menu_reklama" }, { text: "📊 Profil", callback_data: "menu_profile" }],
+        [{ text: "🔄 Nomer almashtirish", callback_data: "menu_logout" }]
+    ];
+
+    // Mini App tugmasi — faqat WEBAPP_URL sozlangan bo'lsa qo'shiladi
+    const webAppUrl = process.env.WEBAPP_URL
+        || (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/app` : null);
+    if (webAppUrl) {
+        rows.push([{ text: "🎨 Ilovani ochish", web_app: { url: webAppUrl } }]);
+    }
+
+    rows.push(lastRow);
+
     return {
         reply_markup: {
-            inline_keyboard: [
-                [{ text: "💎 Avto Almaz", callback_data: "menu_almaz" }, { text: "🏷 Avto UTag", callback_data: "menu_utag" }],
-                [{ text: "👤 AvtoUser", callback_data: "menu_avtouser" }, { text: "⚔️ Avto Reyd", callback_data: "menu_reyd" }],
-                [{ text: "📣 Avto Reklama", callback_data: "menu_reklama" }, { text: "📊 Profil", callback_data: "menu_profile" }],
-                [{ text: "🔄 Nomer almashtirish", callback_data: "menu_logout" }],
-                lastRow
-            ]
+            inline_keyboard: rows
         }
     };
 }

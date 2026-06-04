@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AvtoClick Pro</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="hero">
+            <div class="hero-icon">🚀</div>
+            <h1>AvtoClick <span>Pro</span></h1>
+            <p id="welcome">Yuklanmoqda...</p>
+        </header>
+
+        <section id="statusCard" class="card hidden">
+            <div class="row">
+                <span class="label">🔰 Holat</span>
+                <span id="userStatus" class="value">—</span>
+            </div>
+            <div class="row">
+                <span class="label">⏰ Tarif</span>
+                <span id="userTarif" class="value">—</span>
+            </div>
+            <div class="row">
+                <span class="label">⏳ Muddat</span>
+                <span id="userExpire" class="value">—</span>
+            </div>
+        </section>
+
+        <section id="almazCard" class="card hidden">
+            <div class="card-head">
+                <span class="card-title">💎 Avto Almaz</span>
+                <label class="switch">
+                    <input type="checkbox" id="almazToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <p class="muted">Guruhlarga yuborilgan almaz va pullarni avtomatik yig'adi.</p>
+            <div id="almazState" class="badge">—</div>
+        </section>
+
+        <section id="statsGrid" class="grid hidden">
+            <div class="stat"><div class="stat-num" id="stClicks">0</div><div class="stat-lbl">💎 Almaz</div></div>
+            <div class="stat"><div class="stat-num" id="stReyd">0</div><div class="stat-lbl">⚔️ Reyd</div></div>
+            <div class="stat"><div class="stat-num" id="stUsers">0</div><div class="stat-lbl">👥 User</div></div>
+            <div class="stat"><div class="stat-num" id="stAds">0</div><div class="stat-lbl">📣 Reklama</div></div>
+            <div class="stat"><div class="stat-num" id="stUtag">0</div><div class="stat-lbl">🏷 Utag</div></div>
+        </section>
+
+        <section id="notReg" class="card hidden">
+            <p>⚠️ Siz hali botga kirmagansiz. Iltimos, botda <b>/start</b> bosing.</p>
+        </section>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
