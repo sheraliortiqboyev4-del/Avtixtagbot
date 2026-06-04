@@ -43,9 +43,6 @@ try {
 const app = express();
 app.get('/', (req, res) => res.send('Bot is running!'));
 
-// --- MINI APP (WebApp) — izolyatsiyalangan, mavjud logikaga ta'sir qilmaydi ---
-const { setupMiniApp } = require('./webapp/miniapp');
-
 // --- RENDER SELF-PING SYSTEM ---
 const axios = require('axios');
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL || (process.env.RENDER_SERVICE_NAME ? `https://${process.env.RENDER_SERVICE_NAME}.onrender.com` : null);
@@ -292,9 +289,6 @@ bot.on('polling_error', (error) => {
 require('./handlers/commands')(bot); 
 require('./handlers/callbacks')(bot); 
 require('./handlers/messages')(bot); 
-
-// Mini App backend'ini ulash (mavjud handlerlarga tegmaydi)
-setupMiniApp(app, bot);
 
 // Debug: Xabar kelayotganini tekshirish
 bot.on('message', (msg) => {
