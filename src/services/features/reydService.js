@@ -264,23 +264,36 @@ const startReyd = async (chatId, target, reydMsg, limit, bot, savedPath = null) 
         if (stickerPath && fs.existsSync(stickerPath)) {
             try { fs.unlinkSync(stickerPath); } catch (cleanupErr) {}
         }
-        
-    if (reydSessions[chatId]?.status === 'stopped' || reydSessions[chatId]?.status === 'finished') {
-        const finalStatus = reydSessions[chatId]?.status === 'stopped' ? "to'xtatildi" : "tugadi";
-        bot.sendMessage(chatId, `🏁 **Avto Reyd ${finalStatus}!**\nJami yuborildi: ${reydSessions[chatId]?.count || 0} ta.`, getMainMenu(chatId));
-        
-        const countToAdd = reydSessions[chatId]?.count || 0;
+
+        const session = reydSessions[chatId];
+        const sentCount = session?.count || 0;
+        const wasStopped = session?.status === 'stopped';
+        const finalLabel = wasStopped ? "to'xtatildi" : "tugadi";
+
+        // 1) Status xabarini tahrirlab, natijani ko'rsatamiz (tugmalarni olib tashlaymiz)
+        if (statusMsg && statusMsg.message_id) {
+            await bot.editMessageText(
+                `🏁 **Avto Reyd ${finalLabel}!**\nNishon: ${target}\nJami yuborildi: ${sentCount}/${limit} ta.`,
+                {
+                    chat_id: chatId,
+                    message_id: statusMsg.message_id
+                }
+            ).catch(() => {});
+        }
+
+        // 2) Asosiy menyuni alohida xabarda chiqaramiz
+        await bot.sendMessage(chatId, "📊 **Asosiy menyu:**", getMainMenu(chatId)).catch(() => {});
+
         delete reydSessions[chatId];
         await User.increment({ reydCount: 1 }, { where: { chatId } });
-        
+
         // Barcha vaqtinchalik klientlarni uzish
         for (const key in userClients) {
             if (key.startsWith(`${chatId}_`)) {
-                try { await userClients[key].disconnect(); } catch(e) {}
+                try { await userClients[key].disconnect(); } catch (e) {}
                 delete userClients[key];
             }
         }
-    }
     }
 };
 

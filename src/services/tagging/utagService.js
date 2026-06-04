@@ -8,7 +8,7 @@ const { TelegramClient, Api } = require("telegram");
 const { StringSession } = require("telegram/sessions");
 const config = require("../../config");
 const User = require("../../models/User");
-const { escapeHTML, upsertUtagHistory, normalizeUtagGroupId } = require('../../utils/helpers');
+const { escapeHTML, upsertUtagHistory, normalizeUtagGroupId, getMainMenu } = require('../../utils/helpers');
 const { utagStates, PROMO_UTAG } = require('../userbotState');
 const { ensureClient } = require('../clientManager');
 
@@ -346,9 +346,28 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
             }
         }
         
-        const finalStatus = utagStates[chatId]?.status === 'stopped' ? "To'xtatildi" : "Tugadi";
-        bot.sendMessage(chatId, `🏁 **Uteg jarayoni ${finalStatus}!**\nJami tag qilindi: ${count} ta.`);
-        
+        const wasStopped = utagStates[chatId]?.status === 'stopped';
+        const finalLabel = wasStopped ? "To'xtatildi" : "Tugadi";
+
+        // 1) Status xabarini tahrirlab, natijani ko'rsatamiz (tugmalarni olib tashlaymiz)
+        if (statusMsg && statusMsg.message_id) {
+            await bot.editMessageText(
+                `🏁 **Uteg jarayoni ${finalLabel}!**\nGuruh: ${groupTitle}\nJami tag qilindi: ${count}/${participants.length} ta.`,
+                {
+                    chat_id: chatId,
+                    message_id: statusMsg.message_id
+                }
+            ).catch(() => {});
+        } else {
+            // statusMsg bo'lmasa (masalan /t buyruq orqali) — oddiy xabar
+            await bot.sendMessage(chatId, `🏁 **Uteg jarayoni ${finalLabel}!**\nJami tag qilindi: ${count} ta.`).catch(() => {});
+        }
+
+        // 2) Asosiy menyuni alohida xabarda chiqaramiz (faqat bot orqali ishga tushgan bo'lsa)
+        if (!isCommand) {
+            await bot.sendMessage(chatId, "📊 **Asosiy menyu:**", getMainMenu(chatId)).catch(() => {});
+        }
+
         await User.increment({ utagCount: 1 }, { where: { chatId } });
         delete utagStates[chatId];
     } catch (e) {

@@ -240,8 +240,9 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
     }
 
     // Reklama tugadi.
-    const finalStatus = reklamaStates[chatId]?.status === 'stopped' ? "to'xtatildi" : "tugadi";
-    
+    const wasStopped = reklamaStates[chatId]?.status === 'stopped';
+    const finalLabel = wasStopped ? "to'xtatildi" : "tugadi";
+
     // Clientlarni yopish
     for (const cl of clients) {
         if (cl) { try { await cl.disconnect(); } catch (e) {} }
@@ -249,9 +250,22 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
 
     // Bazadan reklamani o'chirish
     await PremiumAd.destroy({ where: { chatId } });
-
     await User.increment({ adsCount: count }, { where: { chatId } });
-    bot.sendMessage(chatId, `✅ Reklama yakunlandi. Jami yuborildi: ${count} ta.`, getMainMenu(chatId));
+
+    // 1) Status xabarini tahrirlab, natijani ko'rsatamiz (tugmalarni olib tashlaymiz)
+    if (statusMsg && statusMsg.message_id) {
+        await bot.editMessageText(
+            `🏁 **Avto Reklama ${finalLabel}!**\nJami yuborildi: ${count}/${users.length} ta.`,
+            {
+                chat_id: chatId,
+                message_id: statusMsg.message_id
+            }
+        ).catch(() => {});
+    }
+
+    // 2) Asosiy menyuni alohida xabarda chiqaramiz
+    await bot.sendMessage(chatId, "📊 **Asosiy menyu:**", getMainMenu(chatId)).catch(() => {});
+
     delete reklamaStates[chatId];
     return count;
 };
