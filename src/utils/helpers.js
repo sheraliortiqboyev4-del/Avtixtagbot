@@ -1,7 +1,38 @@
 const config = require('../config');
 const Channel = require('../models/Channel');
+const axios = require('axios');
 
 const { Api } = require("telegram");
+
+/**
+ * Xabarga emoji reaksiya qo'yish (Bot API 7.0+ setMessageReaction).
+ * node-telegram-bot-api eski versiyalarida bu metod yo'q, shuning uchun
+ * Telegram API'ga to'g'ridan-to'g'ri murojaat qilamiz.
+ * @param {string|number} chatId
+ * @param {number} messageId
+ * @param {string} emoji - reaksiya emojisi (masalan: '👍', '🔥', '❤')
+ */
+const reactToMessage = async (chatId, messageId, emoji = '👍') => {
+    if (!config.botToken || !messageId) return false;
+    try {
+        await axios.post(
+            `https://api.telegram.org/bot${config.botToken}/setMessageReaction`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                reaction: [{ type: 'emoji', emoji }],
+                is_big: false
+            },
+            { timeout: 10000 }
+        );
+        return true;
+    } catch (e) {
+        // Reaksiya qo'yib bo'lmasa (eski xabar, ruxsat yo'q) — jim o'tkazib yuboramiz
+        const desc = e?.response?.data?.description || e.message;
+        console.log(`⚠️ [reactToMessage] qo'yib bo'lmadi (${chatId}): ${desc}`);
+        return false;
+    }
+};
 
 // Bot API entitylarini GramJS entitylariga o'tkazish
 const convertToGramJsEntities = (entities) => {
@@ -579,5 +610,6 @@ module.exports = {
     REYD_CHAT_REQUEST_ID,
     UTAG_CHAT_REQUEST_ID,
     isUserAdmin,
-    EMOJI_MAP
+    EMOJI_MAP,
+    reactToMessage
 };

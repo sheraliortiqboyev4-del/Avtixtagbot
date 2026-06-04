@@ -14,6 +14,46 @@ const {
 
 if (!global.userStates) global.userStates = {};
 
+// Admin ro'yxatlari uchun sahifa o'lchami (rasmdagidek)
+const ADMIN_LIST_PAGE_SIZE = 10;
+
+// Bitta foydalanuvchi yozuvini rasmdagi ko'rinishda formatlash
+const STATUS_ICON = { approved: '✅', pending: '⏳', blocked: '🚫' };
+const formatUserRow = (u) => {
+    const icon = STATUS_ICON[u.status] || '⏳';
+    const namePart = u.username
+        ? `**${u.name || "Noma'lum"}** (@${u.username}) ${icon}`
+        : `**${u.name || "Noma'lum"}** ${icon}`;
+    const joined = u.joinedAt ? new Date(u.joinedAt) : new Date();
+    const dateStr = `${joined.getFullYear()}-${String(joined.getMonth() + 1).padStart(2, '0')}-${String(joined.getDate()).padStart(2, '0')} ${String(joined.getHours()).padStart(2, '0')}:${String(joined.getMinutes()).padStart(2, '0')}`;
+    return `👤 ${namePart}\n🆔 \`${u.chatId}\` | /info_${u.chatId}\n📅 ${dateStr}`;
+};
+
+// Sahifalangan ro'yxat matni va tugmalarini tayyorlash
+const buildUserListPage = (users, page, title, backCallback) => {
+    const totalPages = Math.max(1, Math.ceil(users.length / ADMIN_LIST_PAGE_SIZE));
+    const safePage = Math.min(Math.max(0, page), totalPages - 1);
+    const start = safePage * ADMIN_LIST_PAGE_SIZE;
+    const pageUsers = users.slice(start, start + ADMIN_LIST_PAGE_SIZE);
+
+    let text = `👥 **${title}:** (Sahifa ${safePage + 1}/${totalPages})\n\n`;
+    if (pageUsers.length === 0) {
+        text += "Hozircha hech kim yo'q.";
+    } else {
+        text += pageUsers.map(formatUserRow).join("\n\n");
+    }
+
+    const navRow = [];
+    if (safePage > 0) navRow.push({ text: "⬅️ Orqaga", callback_data: `${backCallback}_page_${safePage - 1}` });
+    if (safePage < totalPages - 1) navRow.push({ text: "Keyingi ➡️", callback_data: `${backCallback}_page_${safePage + 1}` });
+
+    const keyboard = [];
+    if (navRow.length > 0) keyboard.push(navRow);
+    keyboard.push([{ text: "🔙 Admin Panel", callback_data: "admin_panel" }]);
+
+    return { text, reply_markup: { inline_keyboard: keyboard } };
+};
+
 module.exports = (bot) => {
     // Helper function to safely edit messages and handle "message is not modified" error
     const safeEdit = async (chatId, messageId, text, options = {}, isMarkupOnly = false) => {
@@ -914,48 +954,48 @@ module.exports = (bot) => {
             return await safeAnswer();
         }
         
-        if (data === "admin_all_users") {
+        if (data === "admin_all_users" || data.startsWith("admin_all_users_page_")) {
+            const page = data.startsWith("admin_all_users_page_")
+                ? parseInt(data.replace("admin_all_users_page_", ""), 10) || 0
+                : 0;
             const users = await User.findAll({ order: [['joinedAt', 'DESC']] });
-            
-            const buttons = [];
-            for (const u of users.slice(0, 30)) {
-                const displayName = `${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''}`;
-                buttons.push([{ text: displayName, callback_data: `admin_info_${u.chatId}` }]);
-            }
-            buttons.push([{ text: "🔙 Orqaga", callback_data: "admin_panel" }]);
+            const { text, reply_markup } = buildUserListPage(users, page, "Barcha A'zolar", "admin_all_users");
 
-            await safeEdit(chatId, messageId, "👥 **Barcha foydalanuvchilar:**", {
+            await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
-                reply_markup: { inline_keyboard: buttons }
+                reply_markup
             });
             return await safeAnswer();
         }
 
-        if (data === "admin_pending" || data === "admin_approved" || data === "admin_blocked") {
+        if (
+            data === "admin_pending" || data === "admin_approved" || data === "admin_blocked" ||
+            data.startsWith("admin_pending_page_") || data.startsWith("admin_approved_page_") || data.startsWith("admin_blocked_page_")
+        ) {
+            const baseMatch = data.match(/^(admin_pending|admin_approved|admin_blocked)/);
+            const base = baseMatch[1];
+            const page = data.includes("_page_")
+                ? parseInt(data.split("_page_")[1], 10) || 0
+                : 0;
+
             const statusMap = {
                 "admin_pending": "pending",
                 "admin_approved": "approved",
                 "admin_blocked": "blocked"
             };
-            const status = statusMap[data];
+            const status = statusMap[base];
             const statusTextMap = {
-                "pending": "⏳ Kutilayotganlar",
-                "approved": "✅ Tasdiqlanganlar",
-                "blocked": "🚫 Bloklanganlar"
+                "pending": "Kutilayotganlar",
+                "approved": "Tasdiqlanganlar",
+                "blocked": "Bloklanganlar"
             };
-            
-            const users = await User.findAll({ where: { status }, order: [['joinedAt', 'DESC']] });
-            
-            const buttons = [];
-            for (const u of users.slice(0, 30)) {
-                const displayName = `${u.name || 'Noma\'lum'} ${u.username ? `(@${u.username})` : ''}`;
-                buttons.push([{ text: displayName, callback_data: `admin_info_${u.chatId}` }]);
-            }
-            buttons.push([{ text: "🔙 Orqaga", callback_data: "admin_panel" }]);
 
-            await safeEdit(chatId, messageId, `👥 **${statusTextMap[status]}:**`, {
+            const users = await User.findAll({ where: { status }, order: [['joinedAt', 'DESC']] });
+            const { text, reply_markup } = buildUserListPage(users, page, statusTextMap[status], base);
+
+            await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
-                reply_markup: { inline_keyboard: buttons }
+                reply_markup
             });
             return await safeAnswer();
         }
@@ -1010,10 +1050,21 @@ module.exports = (bot) => {
             const targetId = data.replace("admin_approve_1month_", "");
             const now = new Date();
             const expireAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-            await User.update({ status: 'approved', expireAt, expiryWarningSent: false }, { where: { chatId: targetId } });
+            await User.update({ status: 'approved', expireAt, subscriptionType: 'monthly', expiryWarningSent: false }, { where: { chatId: targetId } });
             triggerBackup('admin_approve', true);
             await bot.sendMessage(targetId, "🎉 Tabriklaymiz! Sizning akkauntingiz 1 oylik uchun tasdiqlandi! /start ni bosing.");
             await safeAnswer({ text: "✅ Foydalanuvchi 1 oylik uchun tasdiqlandi!", show_alert: true });
+
+            const target = await User.findOne({ where: { chatId: targetId } });
+            const expStr = `${expireAt.getFullYear()}-${String(expireAt.getMonth() + 1).padStart(2, '0')}-${String(expireAt.getDate()).padStart(2, '0')}`;
+            const resultText = `✅ **Tasdiqlandi (1 Oy)**\n\n` +
+                `📛 **Ism:** ${target?.name || "Noma'lum"}\n` +
+                `🔗 **Username:** ${target?.username ? `@${target.username}` : "Yo'q"}\n` +
+                `🆔 **ID:** \`${targetId}\`\n` +
+                `⏰ **Tarif:** 1 Oy\n` +
+                `📅 **Tugash sanasi:** ${expStr}\n\n` +
+                `👨‍💻 Admin: ${query.from.first_name || ''}`;
+            await safeEdit(chatId, messageId, resultText, { parse_mode: "Markdown" });
             return;
         }
 
@@ -1023,6 +1074,15 @@ module.exports = (bot) => {
             triggerBackup('admin_approve', true);
             await bot.sendMessage(targetId, "🎉 Tabriklaymiz! Sizning akkauntingiz VIP sifatida tasdiqlandi! /start ni bosing.");
             await safeAnswer({ text: "✅ Foydalanuvchi VIP sifatida tasdiqlandi!", show_alert: true });
+
+            const target = await User.findOne({ where: { chatId: targetId } });
+            const resultText = `👑 **Tasdiqlandi (VIP)**\n\n` +
+                `📛 **Ism:** ${target?.name || "Noma'lum"}\n` +
+                `🔗 **Username:** ${target?.username ? `@${target.username}` : "Yo'q"}\n` +
+                `🆔 **ID:** \`${targetId}\`\n` +
+                `⏰ **Tarif:** VIP (cheksiz)\n\n` +
+                `👨‍💻 Admin: ${query.from.first_name || ''}`;
+            await safeEdit(chatId, messageId, resultText, { parse_mode: "Markdown" });
             return;
         }
 
@@ -1044,6 +1104,14 @@ module.exports = (bot) => {
             triggerBackup('admin_block', true);
             await bot.sendMessage(targetId, "⚠️ Sizning akkauntingiz bloklandi. Admin bilan bog'laning.");
             await safeAnswer({ text: "🚫 Foydalanuvchi bloklandi!", show_alert: true });
+
+            const target = await User.findOne({ where: { chatId: targetId } });
+            const resultText = `🚫 **Bloklandi**\n\n` +
+                `📛 **Ism:** ${target?.name || "Noma'lum"}\n` +
+                `🔗 **Username:** ${target?.username ? `@${target.username}` : "Yo'q"}\n` +
+                `🆔 **ID:** \`${targetId}\`\n\n` +
+                `👨‍💻 Admin: ${query.from.first_name || ''}`;
+            await safeEdit(chatId, messageId, resultText, { parse_mode: "Markdown" });
             return;
         }
     });

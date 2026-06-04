@@ -14,7 +14,8 @@ const {
     removeKeyboardMarkup,
     getPhoneShareKeyboard,
     getUtagSetupKeyboard,
-    getUtagModeKeyboard
+    getUtagModeKeyboard,
+    reactToMessage
 } = require('../utils/helpers');
 const { triggerBackup } = require('../utils/dbBackup');
 const { initAuth, handleAuthStep, scrapeUsers, startReyd, startReklama, startAutoTag } = require('../services/userbot');
@@ -42,6 +43,11 @@ module.exports = (bot) => {
         
         // 3. Agar hech qanday holatda bo'lmasa, xabarni e'tiborsiz qoldiramiz
         if (!state) return;
+
+        // 3.1. Bot kutayotgan xabarga reaksiya qo'yamiz (foydalanuvchi so'ralgan ma'lumotni yuborganda)
+        if (msg.message_id) {
+            reactToMessage(chatId, msg.message_id, '👍').catch(() => {});
+        }
 
         // Session check for features
         if (!['WAITING_PHONE', 'WAITING_CODE', 'WAITING_PASSWORD', 'WAITING_TIME', 'WAITING_BROADCAST'].includes(state.step)) {

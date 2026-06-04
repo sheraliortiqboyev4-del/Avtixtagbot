@@ -231,13 +231,29 @@ const resendAuthCode = async (chatId, bot, viaSms = false) => {
     return true;
 };
 
+const MAX_AUTH_ATTEMPTS = 3;
+
 const handleAuthStep = async (chatId, input, bot) => {
     const auth = global.authClients[chatId];
     if (!auth) throw new Error("AUTH_NOT_FOUND");
 
+    // Noto'g'ri urinishni hisoblab, limitga yetganda sessiyani tozalaydi
+    const registerWrongAttempt = async (field, baseMessage) => {
+        auth[field] = (auth[field] || 0) + 1;
+        const left = MAX_AUTH_ATTEMPTS - auth[field];
+        if (left <= 0) {
+            await cleanupAuthClient(chatId);
+            delete global.userStates[chatId];
+            throw new Error("3 marta noto'g'ri kiritildi. Jarayon bekor qilindi.\n\nQaytadan boshlash uchun /start bosing.");
+        }
+        throw new Error(`${baseMessage}\n\n⚠️ Sizda yana ${left} ta urinish qoldi.`);
+    };
+
     if (auth.step === 'WAITING_CODE') {
         const code = input.replace(/[^\d]/g, '');
-        if (code.length < 5) throw new Error("Kod noto'g'ri. 5 xonali kodni yuboring.");
+        if (code.length < 5) {
+            return await registerWrongAttempt('codeAttempts', "Kod noto'g'ri. 5 xonali kodni yuboring.");
+        }
 
         try {
             const result = await auth.client.invoke(new Api.auth.SignIn({
@@ -259,7 +275,9 @@ const handleAuthStep = async (chatId, input, bot) => {
                 await bot.sendMessage(chatId, "🔐 **2FA parol** kerak. Parolingizni yuboring:", { parse_mode: "Markdown" });
                 return "NEED_PASSWORD";
             }
-            if (msg.includes('PHONE_CODE_INVALID')) throw new Error("Kod noto'g'ri. Qaytadan yuboring.");
+            if (msg.includes('PHONE_CODE_INVALID')) {
+                return await registerWrongAttempt('codeAttempts', "Kod noto'g'ri. Qaytadan yuboring.");
+            }
             if (msg.includes('PHONE_CODE_EXPIRED')) {
                 await cleanupAuthClient(chatId);
                 delete global.userStates[chatId];
@@ -280,7 +298,9 @@ const handleAuthStep = async (chatId, input, bot) => {
             return "PASSWORD_SUBMITTED";
         } catch (err) {
             const msg = authErrMsg(err);
-            if (msg.includes('PASSWORD_HASH_INVALID')) throw new Error("Parol noto'g'ri.");
+            if (msg.includes('PASSWORD_HASH_INVALID')) {
+                return await registerWrongAttempt('passwordAttempts', "Parol noto'g'ri.");
+            }
             throw new Error(msg);
         }
     }
