@@ -471,10 +471,39 @@ function getReydMenu(accountMode = 'main', accountsCount = 0) {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "🚀 Reyd boshlash", callback_data: "reyd_start" }],
+                [{ text: "🚫 Avto Ban", callback_data: "ban_menu" }],
                 [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "reyd_change_mode" }],
                 [{ text: `➕ Akkaunt qo'shish (${accountsCount}/10)`, callback_data: "reyd_add_acc" }],
                 [{ text: "🗑 Akkauntlarni tozalash", callback_data: "reyd_clear_acc" }],
                 [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+            ]
+        }
+    };
+}
+
+// Helper: Avto Ban — tezlik tanlash menyusi
+function getBanSpeedKeyboard() {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "🐢 Sekin (xavfsiz)", callback_data: "ban_speed_slow" }],
+                [{ text: "⚡ O'rtacha", callback_data: "ban_speed_normal" }],
+                [{ text: "🚀 Tez (xavfli)", callback_data: "ban_speed_fast" }],
+                [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
+            ]
+        }
+    };
+}
+
+// Helper: Avto Ban — kimlarni tanlash
+function getBanFilterKeyboard() {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: "👥 Hammani", callback_data: "ban_filter_all" }],
+                [{ text: "🟢 Onlinelarni", callback_data: "ban_filter_online" }],
+                [{ text: "🔢 Ma'lum miqdorni", callback_data: "ban_filter_count" }],
+                [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
             ]
         }
     };
@@ -521,6 +550,7 @@ function getPendingPaymentKeyboard() {
 const SCRAPE_CHAT_REQUEST_ID = 1;
 const REYD_CHAT_REQUEST_ID = 2;
 const UTAG_CHAT_REQUEST_ID = 3;
+const BAN_CHAT_REQUEST_ID = 4;
 
 function getGroupPickerKeyboard(requestId) {
     return {
@@ -598,6 +628,8 @@ module.exports = {
     getUtagModeKeyboard,
     getReklamaMenu,
     getReydMenu,
+    getBanSpeedKeyboard,
+    getBanFilterKeyboard,
     getAdminMenu,
     getPendingPaymentKeyboard,
     getAvtoUserGroupPickerKeyboard,
@@ -609,6 +641,7 @@ module.exports = {
     SCRAPE_CHAT_REQUEST_ID,
     REYD_CHAT_REQUEST_ID,
     UTAG_CHAT_REQUEST_ID,
+    BAN_CHAT_REQUEST_ID,
     isUserAdmin,
     EMOJI_MAP,
     reactToMessage

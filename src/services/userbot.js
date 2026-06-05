@@ -22,6 +22,7 @@ const {
     reklamaStates,
     reydSessions,
     scrapeSessions,
+    banSessions,
     blockExpiredUser
 } = require('./userbotState');
 
@@ -31,8 +32,10 @@ const { scrapeUsers, scrapeMentionUsers } = require('./scraping/scrapeService');
 const { startReyd } = require('./features/reydService');
 const { startReklama } = require('./features/reklamaService');
 const { startAutoTag } = require('./tagging/utagService');
+const { prepareBan, startBan, BAN_SPEEDS } = require('./features/banService');
 
 module.exports = {
-    userClients, avtoAlmazStates, utagStates, reklamaStates, reydSessions, scrapeSessions, startUserbot, blockExpiredUser,
-    initAuth, handleAuthStep, resendAuthCode, scrapeUsers, scrapeMentionUsers, startReyd, startReklama, startAutoTag, loadAllStates
+    userClients, avtoAlmazStates, utagStates, reklamaStates, reydSessions, scrapeSessions, banSessions, startUserbot, blockExpiredUser,
+    initAuth, handleAuthStep, resendAuthCode, scrapeUsers, scrapeMentionUsers, startReyd, startReklama, startAutoTag, loadAllStates,
+    prepareBan, startBan, BAN_SPEEDS
 };

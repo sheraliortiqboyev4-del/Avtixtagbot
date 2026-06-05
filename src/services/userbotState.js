@@ -15,6 +15,7 @@ const utagStates = {};
 const reklamaStates = {};
 const reydSessions = {}; // { chatId: { status: 'running'|'stopped' } }
 const scrapeSessions = {}; // Tracks active scraping sessions
+const banSessions = {}; // Avto Ban jarayonlari
 
 const getPromoBot = () => {
     const u = (config.botPromoUsername || '@Foydasizku_bot').trim();
@@ -93,6 +94,7 @@ module.exports = {
     reklamaStates,
     reydSessions,
     scrapeSessions,
+    banSessions,
     getPromoBot,
     PROMO_UTAG,
     PROMO_REKLAMA,

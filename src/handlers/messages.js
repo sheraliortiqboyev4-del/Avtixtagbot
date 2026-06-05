@@ -9,6 +9,7 @@ const {
     SCRAPE_CHAT_REQUEST_ID,
     REYD_CHAT_REQUEST_ID,
     UTAG_CHAT_REQUEST_ID,
+    BAN_CHAT_REQUEST_ID,
     parseSharedGroup,
     normalizePhoneInput,
     removeKeyboardMarkup,
@@ -364,5 +365,46 @@ module.exports = (bot) => {
             }).catch((err) => bot.sendMessage(chatId, `❌ Xatolik: ${err.message}`));
             return;
         }
+
+        // ============ AVTO BAN INPUT ============
+        if (state.step === 'WAITING_BAN_GROUP') {
+            const { getBanFilterKeyboard } = require('../utils/helpers');
+            let groupLink = null;
+
+            if (msg.chat_shared && msg.chat_shared.request_id === BAN_CHAT_REQUEST_ID) {
+                const { id } = parseSharedGroup(msg.chat_shared);
+                groupLink = id;
+            } else if (text) {
+                groupLink = text.trim();
+            }
+            if (!groupLink) return;
+
+            global.userStates[chatId] = { step: 'WAITING_BAN_FILTER', groupLink };
+            await bot.sendMessage(chatId, "🎯 **Kimlarni banlaymiz?**", {
+                parse_mode: "Markdown",
+                ...removeKeyboardMarkup()
+            });
+            await bot.sendMessage(chatId, "Tanlang:", getBanFilterKeyboard());
+            return;
+        }
+
+        if (state.step === 'WAITING_BAN_COUNT') {
+            if (!text) return;
+            if (!/^\d+$/.test(text.trim())) {
+                return bot.sendMessage(chatId, "❌ Faqat raqam yuboring (masalan: 50).");
+            }
+            const limit = parseInt(text.trim(), 10);
+            if (limit < 1) {
+                return bot.sendMessage(chatId, "❌ Kamida 1 ta bo'lishi kerak.");
+            }
+            global.userStates[chatId] = { ...state, step: 'WAITING_BAN_SPEED', filter: 'all', limit };
+            const { getBanSpeedKeyboard } = require('../utils/helpers');
+            await bot.sendMessage(chatId, "⚙️ **Tezlikni tanlang:**\n\n🐢 Sekin — eng xavfsiz\n⚡ O'rtacha — muvozanat\n🚀 Tez — tezroq, lekin xavfli", {
+                parse_mode: "Markdown",
+                ...getBanSpeedKeyboard()
+            });
+            return;
+        }
+        // ============ AVTO BAN INPUT END ============
     });
 };

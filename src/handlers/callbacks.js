@@ -342,6 +342,136 @@ module.exports = (bot) => {
             return await safeAnswer();
         }
 
+        // ============ AVTO BAN ============
+        if (data === "ban_menu") {
+            const { getGroupPickerKeyboard, BAN_CHAT_REQUEST_ID } = require('../utils/helpers');
+            global.userStates[chatId] = { step: 'WAITING_BAN_GROUP' };
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+            await bot.sendMessage(
+                chatId,
+                "🚫 **Avto Ban**\n\nQaysi guruh/kanaldan banlamoqchisiz?\nGuruh linkini yuboring yoki pastdan tanlang:",
+                { parse_mode: "Markdown", reply_markup: getGroupPickerKeyboard(BAN_CHAT_REQUEST_ID) }
+            );
+            return await safeAnswer();
+        }
+
+        if (data === "ban_filter_all" || data === "ban_filter_online" || data === "ban_filter_count") {
+            const state = global.userStates[chatId];
+            if (!state || state.step !== 'WAITING_BAN_FILTER') {
+                return await safeAnswer({ text: "Sessiya muddati tugagan. Qaytadan boshlang.", show_alert: true });
+            }
+
+            if (data === "ban_filter_count") {
+                global.userStates[chatId] = { ...state, step: 'WAITING_BAN_COUNT', filter: 'all' };
+                await safeEdit(chatId, messageId, "🔢 Nechta odamni banlamoqchisiz? (faqat raqam yuboring, masalan: 50)", {
+                    parse_mode: "Markdown"
+                });
+                return await safeAnswer();
+            }
+
+            const filter = data === "ban_filter_online" ? 'online' : 'all';
+            global.userStates[chatId] = { ...state, step: 'WAITING_BAN_SPEED', filter, limit: 0 };
+            const { getBanSpeedKeyboard } = require('../utils/helpers');
+            await safeEdit(chatId, messageId, "⚙️ **Tezlikni tanlang:**\n\n🐢 Sekin — eng xavfsiz\n⚡ O'rtacha — muvozanat\n🚀 Tez — tezroq, lekin xavfli", {
+                parse_mode: "Markdown",
+                ...getBanSpeedKeyboard()
+            });
+            return await safeAnswer();
+        }
+
+        if (data === "ban_speed_slow" || data === "ban_speed_normal" || data === "ban_speed_fast") {
+            const state = global.userStates[chatId];
+            if (!state || state.step !== 'WAITING_BAN_SPEED') {
+                return await safeAnswer({ text: "Sessiya muddati tugagan. Qaytadan boshlang.", show_alert: true });
+            }
+            const speed = data.replace('ban_speed_', '');
+            await safeAnswer({ text: "⏳ Tekshirilmoqda..." });
+
+            const { prepareBan } = require('../services/userbot');
+            try {
+                const info = await prepareBan(chatId, state.groupLink, state.filter, state.limit || 0, bot);
+                global.userStates[chatId] = { ...state, step: 'CONFIRM_BAN', speed, groupTitle: info.title };
+
+                const filterText = state.filter === 'online' ? 'Onlinelarni'
+                    : (state.limit > 0 ? `${state.limit} ta odamni` : 'Hammani');
+                const typeText = info.isChannel ? "🚫 Ban (superguruh/kanal)" : "👢 Chiqarish (oddiy guruh)";
+
+                const confirmText =
+                    `🚫 **Avto Ban — Tasdiqlash**\n\n` +
+                    `📍 Guruh: ${info.title}\n` +
+                    `🎯 Nishon: ${filterText}\n` +
+                    `👥 Topildi: ${info.total} ta a'zo\n` +
+                    `🔧 Amal: ${typeText}\n\n` +
+                    `⚠️ **OGOHLANTIRISH:** Qilingan ishlar oqibatiga admin javob bermaydi. Barcha mas'uliyat foydalanuvchining zimmasida.\n\n` +
+                    `Boshlash uchun tugmani bosing:`;
+
+                await safeEdit(chatId, messageId, confirmText, {
+                    parse_mode: "Markdown",
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: "✅ Boshlash", callback_data: "ban_start_confirm" }],
+                            [{ text: "❌ Bekor qilish", callback_data: "ban_cancel" }]
+                        ]
+                    }
+                });
+            } catch (e) {
+                global.userStates[chatId] = null;
+                delete global.userStates[chatId];
+                await safeEdit(chatId, messageId, `❌ **Banlab bo'lmaydi:**\n\n${e.message}`, {
+                    parse_mode: "Markdown",
+                    reply_markup: { inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]] }
+                });
+            }
+            return;
+        }
+
+        if (data === "ban_start_confirm") {
+            const state = global.userStates[chatId];
+            if (!state || state.step !== 'CONFIRM_BAN') {
+                return await safeAnswer({ text: "Sessiya muddati tugagan.", show_alert: true });
+            }
+            await safeAnswer({ text: "🚫 Avto Ban boshlandi!" });
+            try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
+
+            const { startBan } = require('../services/userbot');
+            startBan(chatId, state.groupLink, state.filter, state.limit || 0, state.speed, bot).catch(err => {
+                console.error("Ban error:", err.message);
+                bot.sendMessage(chatId, "❌ Ban xatosi: " + err.message);
+            });
+            delete global.userStates[chatId];
+            return;
+        }
+
+        if (data === "ban_cancel") {
+            delete global.userStates[chatId];
+            await safeAnswer({ text: "Bekor qilindi" });
+            return await safeEdit(chatId, messageId, "❌ Avto Ban bekor qilindi.", {
+                reply_markup: { inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]] }
+            });
+        }
+
+        if (data === "ban_pause" || data === "ban_resume" || data === "ban_stop") {
+            const { banSessions } = require('../services/userbot');
+            if (!banSessions[chatId]) {
+                return await safeAnswer({ text: "❌ Faol Ban jarayoni topilmadi.", show_alert: true });
+            }
+            const action = data.replace('ban_', '');
+            if (action === "pause") {
+                banSessions[chatId].status = 'paused';
+                return await safeAnswer({ text: "⏸ Pauza" });
+            }
+            if (action === "resume") {
+                banSessions[chatId].status = 'running';
+                return await safeAnswer({ text: "▶️ Davom etmoqda" });
+            }
+            if (action === "stop") {
+                banSessions[chatId].status = 'stopped';
+                return await safeAnswer({ text: "⏹ To'xtatildi" });
+            }
+            return;
+        }
+        // ============ AVTO BAN END ============
+
         if (data === "menu_reklama") {
             const { getReklamaMenu } = require('../utils/helpers');
             const mode = user.reklamaAccountMode || 'main';
