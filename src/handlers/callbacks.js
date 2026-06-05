@@ -255,11 +255,26 @@ module.exports = (bot) => {
         }
 
         if (data === "menu_reyd") {
+            const text = `⚔️ **Avto Reyd bo'limi**\n\nQuyidagilardan birini tanlang:\n\n📨 **Avto Xabar** — guruh yoki userga ko'p marta xabar/stiker yuborish.\n🚫 **Avto Ban** — guruh a'zolarini avtomatik ban qilish.`;
+            await safeEdit(chatId, messageId, text, {
+                parse_mode: "Markdown",
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "📨 Avto Xabar", callback_data: "reyd_message" }],
+                        [{ text: "🚫 Avto Ban", callback_data: "ban_menu" }],
+                        [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                    ]
+                }
+            });
+            return await safeAnswer();
+        }
+
+        if (data === "reyd_message") {
             const { getReydMenu } = require('../utils/helpers');
             const mode = user.reydAccountMode || 'main';
             const accCount = user.reydAccounts ? user.reydAccounts.length : 0;
             const modeText = mode === 'all' ? "Barcha akkauntlar" : "Faqat asosiy akkaunt";
-            const text = `⚔️ **Reyd bo'limi**\n\n⚙️ Hozirgi rejim: **${modeText}**\n👥 Akkauntlar: **${accCount + 1} ta**\n\nSiz bir nechta akkaunt ulab, reydni yanada tezroq va samaraliroq amalga oshirishingiz mumkin. Akkauntlar navbatma-navbat xabar yuboradi.`;
+            const text = `📨 **Avto Xabar (Reyd)**\n\n⚙️ Hozirgi rejim: **${modeText}**\n👥 Akkauntlar: **${accCount + 1} ta**\n\nSiz bir nechta akkaunt ulab, reydni yanada tezroq va samaraliroq amalga oshirishingiz mumkin. Akkauntlar navbatma-navbat xabar yuboradi.`;
             
             await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
@@ -326,7 +341,7 @@ module.exports = (bot) => {
                 const buttons = [
                     [{ text: "👤 Faqat asosiy akkaunt", callback_data: "reyd_set_mode_main" }],
                     [{ text: "🌐 Barcha akkauntlar", callback_data: "reyd_set_mode_all" }],
-                    [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
+                    [{ text: "🔙 Orqaga", callback_data: "reyd_message" }]
                 ];
                 await safeEdit(chatId, messageId, text, {
                     parse_mode: "Markdown",
@@ -667,7 +682,7 @@ module.exports = (bot) => {
         if (data === "reyd_cancel") {
             await safeAnswer();
             delete global.userStates[chatId];
-            return await safeEdit(chatId, messageId, "❌ Reyd bekor qilindi.", { reply_markup: { inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]] } });
+            return await safeEdit(chatId, messageId, "❌ Reyd bekor qilindi.", { reply_markup: { inline_keyboard: [[{ text: "🔙 Orqaga", callback_data: "reyd_message" }]] } });
         }
 
         if (data.startsWith("reyd_")) {

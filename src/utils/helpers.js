@@ -471,11 +471,10 @@ function getReydMenu(accountMode = 'main', accountsCount = 0) {
         reply_markup: {
             inline_keyboard: [
                 [{ text: "🚀 Reyd boshlash", callback_data: "reyd_start" }],
-                [{ text: "🚫 Avto Ban", callback_data: "ban_menu" }],
                 [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "reyd_change_mode" }],
                 [{ text: `➕ Akkaunt qo'shish (${accountsCount}/10)`, callback_data: "reyd_add_acc" }],
                 [{ text: "🗑 Akkauntlarni tozalash", callback_data: "reyd_clear_acc" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
             ]
         }
     };
