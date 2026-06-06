@@ -11,41 +11,45 @@ const {
     getPendingPaymentKeyboard
 } = require('../utils/helpers');
 
-const HELP_TEXT = `🧾 **YORDAM BO'LIMI**
+const HELP_TEXT = `🧾 𝗬𝗢𝗥𝗗𝗔𝗠 𝗕𝗢𝗟𝗜𝗠𝗜
 
-🤖 **Botning barcha imkoniyatlari bilan tanishing:**
+🤖 𝗕𝗼𝘁 𝗶𝗺𝗸𝗼𝗻𝗶𝘆𝗮𝘁𝗹𝗮𝗿𝗶:
 
-💎 **Avto Almaz**
-➤ Guruhlarga yuborilgan almaz va pullarni avto yigadi. 
-➤ Siz botni yoqib qo'ysangiz kifoya, qolganini o'zi bajaradi.
+💎 𝗔𝘃𝘁𝗼 𝗔𝗹𝗺𝗮𝘇 
+• Guruhlardagi almaz va pullarni avto yigʻadi.
+ • Tizim yoqilsa, jarayon toʻliq avtomatik bajariladi.
 
-🏷 **Avto Utag**
-➤ Guruh a'zolarini bittalab "tag" qilib chiqadi.
-➤ Guruhda: /t (o'z so'z) , /b (bot so'zlari) , /s (to'xtatish).
-➤ Bot orqali: online/hamma + tarixda saqlangan sozlamalar bilan qayta boshlash.
+🏷 𝗔𝘃𝘁𝗼 𝗨𝘁𝗮𝗴 
+• Guruh aʼzolarini ketma-ket tag qilib chiqadi.
+ • Buyruqlar: /t (matn), /b (bot matni), /s (toʻxtatish).
+ • Sozlamalar: online/hamma + tarixni qayta tiklash.
 
-👤 **AvtoUser**
-➤ Istalgan guruhdan foydalanuvchilar ro'yxatini (username) yig'ib beradi. 
-➤ Yig'ilgan ro'yxatni Reklama uchun ishlatishingiz mumkin.
+👤 𝗔𝘃𝘁𝗼 𝗨𝘀𝗲𝗿 
+• Istalgan guruh aʼzolarining username roʻyxatini yigʻadi. 
+• Maʼlumotlar reklama tarqatish uchun tayyorlanadi.
 
-⚔️ **Avto Reyd**
-➤ Berilgan guruh yoki foydalanuvchiga tinimsiz xabar/stiker yuboradi. 
-➤ Bir vaqtning o'zida bir nechta akkauntdan foydalanish imkoniyati mavjud.
+⚔️ 𝗔𝘃𝘁𝗼 𝗥𝗲𝘆𝗱 
+• Guruh yoki foydalanuvchiga tinimsiz xabarlar yuboradi. 
+• Bir vaqtda bir nechta akkauntni ulash imkoniyati bor.
 
-🚀 **Avto Reklama**
-➤ Siz yuborgan foydalanuvchilar ro'yxatiga avtomatik reklama tarqatadi. 
-➤ Spamga tushmaslik uchun akkauntlarni navbatma-navbat almashtiradi.
+🚫 𝗔𝘃𝘁𝗼 𝗕𝗮𝗻 
+• Guruhdagi aʼzolarni toʻliq avtomatik tarzda ban qilib chiqadi. 
+• Guruhni tozalash jarayonini maksimal darajada tezlashtiradi.
 
-📊 **Profil va Statistika**
-➤ Sizning botdagi holatingiz, tarifingiz va statistikangizni ko'rsatadi.
+🚀 𝗔𝘃𝘁𝗼 𝗥𝗲𝗸𝗹𝗮𝗺𝗮 
+• Yigʻilgan bazaga avtomatik reklama tarqatadi. 
+• Spamdan himoya: akkauntlar navbat bilan almashadi.
 
-🔄 **Raqamni o'zgartirish**
-➤ Joriy akkauntdan chiqib, yangi raqam orqali kirish imkonini beradi.
+📊 𝗣𝗿𝗼𝗳𝗶𝗹 
+• Joriy holat, tarif muddati va umumiy statistika.
 
-⚠️ **Eslatma**: Botdan to'liq foydalanish uchun admin tomonidan tasdiqlangan bo'lishingiz shart.
+🔄 𝗥𝗮𝗾𝗮𝗺𝗻𝗶 𝗮𝗹𝗺𝗮𝘀𝗵𝘁𝗶𝗿𝗶𝘀𝗵 
+• Akkauntdan chiqish va yangi raqamni tizimga ulash.
 
-📞 **Rasmiy kanal**: @AvtoBotOfficial
-👨‍💼 **Admin**: @id_uzzz`;
+⚠️ 𝗘𝘀𝗹𝗮𝘁𝗺𝗮: Bot funksiyalari admin tasdigʻidan soʻng ishga tushadi.
+
+📢 𝗞𝗮𝗻𝗮𝗹: @AvtoBotOfficial 
+👨‍💼 𝗔𝗱𝗺𝗶𝗻: @id_uzzz`;
 
 module.exports = (bot) => {
     bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => { 
@@ -80,14 +84,14 @@ module.exports = (bot) => {
     
         if (user.status === 'blocked') {
             const blockedText =
-                `⚠ Sizning foydalanish muddatingiz tugagan.\nBotdan foydalanishni davom ettirish uchun to'lovni amalga oshiring va botni qayta ishga tushiring.\n\n👨‍💼 Admin: @ortiqov_x7`;
+                `**⚠ Sizning foydalanish muddatingiz tugagan.Botdan foydalanishni davom ettirish uchun to'lovni amalga oshiring va botni qayta ishga tushiring.\n\n👨‍💼 Admin: @ortiqov_x7**`;
             bot.sendMessage(chatId, blockedText, {
                 reply_markup: getPendingPaymentKeyboard()
             });
 
             // Adminga xabar yuborish
             const now = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
-            const adminNotifyText = `🆕 **Yangi foydalanuvchi!**\n\n👤 Ism: ${name}\n🆔 ID: \`${chatId}\`\n📅 Vaqt: ${now}\n\nBlokdan ochish uchun tugmani bosing:`;
+            const adminNotifyText = `🆕 **Yangi foydalanuvchi!\n\n👤 Ism: ${name}\n🆔 ID: \`${chatId}\`\n📅 Vaqt: ${now}\n\nBlokdan ochish uchun tugmani bosing:**`;
             bot.sendMessage(config.adminId, adminNotifyText, {
                 parse_mode: "Markdown",
                 reply_markup: {
@@ -118,10 +122,10 @@ module.exports = (bot) => {
             });
 
             const paymentAskText =
-                `👋 Assalomu alaykum, Hurmatli ${name}!\n\n` +
-                `⚠ Siz botdan foydalanish uchun botning oylik tulovini amalga oshirmagansiz.\n` +
-                `⚠ Botdan foydalanish uchun admin orqali to'lov qiling!!!\n\n` +
-                `👨‍💼 Admin: @id_uzzz`;
+                `**👋 Assalomu alaykum, Hurmatli ${name}!**\n\n` +
+                `**⚠ Siz botdan foydalanish uchun botning oylik tulovini amalga oshirmagansiz.**\n` +
+                `**⚠ Botdan foydalanish uchun admin orqali to'lov qiling!!!**\n\n` +
+                `**👨‍💼 Admin: @id_uzzz**`;
             await bot.sendMessage(chatId, paymentAskText, {
                 parse_mode: 'Markdown',
                 reply_markup: getPendingPaymentKeyboard()
@@ -136,7 +140,7 @@ module.exports = (bot) => {
             avtoAlmazStates[chatId] = user.avtoAlmaz;
 
             // Agar sessiya bo'lsa, menyuni ko'rsatamiz va userbotni ulaymiz
-            const welcomeText = `👋 Assalomu alaykum, Hurmatli ${name}! \n\n 🤖 Bu bot orqali siz: \n • 💎 Avto Almaz - avtomatik almaz yig'ish \n • 👤 AvtoUser - guruhdan foydalanuvchilarni yig'ish \n • ⚔ Avto Reyd - guruhga yoki userga xabar yuborish \n • 📣 Avto Reklama - foydalanuvchilarga reklama yuborish \n • 🏷 Avto Uteg - guruhda foydalanuvchilarni uteg qilish \n\n Botdan foydalanish uchun menudan tanlang!`;
+            const welcomeText = `**👋 Assalomu alaykum, Hurmatli ${name}! \n\n 🤖 Bu bot orqali siz: \n • 💎 Avto Almaz - avtomatik almaz yig'ish \n • 👤 AvtoUser - guruhdan foydalanuvchilarni yig'ish \n • ⚔ Avto Reyd - guruhga yoki userga xabar yuborish \n • 📣 Avto Reklama - foydalanuvchilarga reklama yuborish \n • 🏷 Avto Uteg - guruhda foydalanuvchilarni uteg qilish \n\n Botdan foydalanish uchun menudan tanlang!**`;
             bot.sendMessage(chatId, welcomeText, getMainMenu(chatId)); 
             
             startUserbot(chatId, user.session, bot); 
@@ -144,7 +148,7 @@ module.exports = (bot) => {
             // Agar sessiya bo'lmasa, login jarayonini boshlaymiz
             const { getPhoneShareKeyboard } = require('../utils/helpers');
             global.userStates[chatId] = { step: 'WAITING_PHONE' };
-            const text = `👋 **Xush kelibsiz!**\n\nBot funksiyalaridan foydalanish uchun Telegram akkauntingizga kirishingiz kerak.\n\n📞 Iltimos, **telefon raqamni** xalqaro formatda yuboring:\n(Masalan: \`+998901234567\`)`;
+            const text = `**👋 **Xush kelibsiz!**\n\nBot funksiyalaridan foydalanish uchun Telegram akkauntingizga kirishingiz kerak.\n\n📞 Iltimos, **telefon raqamni** xalqaro formatda yuboring:\n(Masalan: \`+998901234567\`)**`;
             bot.sendMessage(chatId, text, { parse_mode: "Markdown", reply_markup: getPhoneShareKeyboard() });
         }
     }); 
@@ -156,7 +160,7 @@ module.exports = (bot) => {
 
         const user = await User.findOne({ where: { chatId } });
         if (!user || !user.session) {
-            return bot.sendMessage(chatId, "❌ Menyuni ko'rish uchun avval botga kiring.");
+            return bot.sendMessage(chatId, "❌ **Menyuni ko'rish uchun avval botga kiring.**");
         }
         bot.sendMessage(chatId, "📊 **Asosiy menyu:**", getMainMenu(chatId));
     });
@@ -172,10 +176,10 @@ module.exports = (bot) => {
         if (!isMember) return sendSubscriptionAsk(bot, chatId);
 
         const user = await User.findOne({ where: { chatId } });
-        if (!user) return bot.sendMessage(chatId, "❌ Ro'yxatdan o'tmagansiz.");
+        if (!user) return bot.sendMessage(chatId, "❌ **Ro'yxatdan o'tmagansiz.**");
 
         const accCount = (user.reklamaAccounts ? user.reklamaAccounts.length : 0) + (user.reydAccounts ? user.reydAccounts.length : 0) + (user.session ? 1 : 0);
-        const text = `👤 **Profilingiz:**\n\nIsm: ${user.name}\nID: \`${user.chatId}\`\nStatus: ${user.status}\nTarif: ${user.subscriptionType}\nMuddat: ${formatRemainingTime(user.expireAt)}\n💎 Almazlar: ${user.clicks}\n📱 Akkauntlar: ${accCount} ta`;
+        const text = `👤 **Profilingiz:\n\nIsm: ${user.name}\nID: \`${user.chatId}\`\nStatus: ${user.status}\nTarif: ${user.subscriptionType}\nMuddat: ${formatRemainingTime(user.expireAt)}\n💎 Almazlar: ${user.clicks}\n📱 Akkauntlar: ${accCount} ta**`;
         bot.sendMessage(chatId, text);
     });
 
@@ -184,7 +188,7 @@ module.exports = (bot) => {
         if (msg.chat.id.toString() !== config.adminId.toString()) return; 
         const targetId = match[1]; 
         const user = await User.findOne({ where: { chatId: targetId } }); 
-        if (!user) return bot.sendMessage(config.adminId, "❌ Foydalanuvchi topilmadi."); 
+        if (!user) return bot.sendMessage(config.adminId, "❌ **Foydalanuvchi topilmadi.**"); 
         
         const statusText = user.status === 'approved' ? "✅ Tasdiqlangan" : (user.status === 'blocked' ? "🚫 Bloklangan" : "⏳ Tasdiqlanmagan");
         const tarifText = user.subscriptionType || "Oddiy";

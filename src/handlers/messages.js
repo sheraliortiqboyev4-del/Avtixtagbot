@@ -47,7 +47,7 @@ module.exports = (bot) => {
 
         // 3.1. Bot kutayotgan xabarga reaksiya qo'yamiz (foydalanuvchi so'ralgan ma'lumotni yuborganda)
         if (msg.message_id) {
-            reactToMessage(chatId, msg.message_id, '👍').catch(() => {});
+            reactToMessage(chatId, msg.message_id, '❤️').catch(() => {});
         }
 
         // Session check for features
@@ -55,7 +55,7 @@ module.exports = (bot) => {
             const user = await User.findOne({ where: { chatId } });
             if (!user || !user.session) {
                 delete global.userStates[chatId];
-                return bot.sendMessage(chatId, "⚠️ Botdan foydalanish uchun avval Telegram akkauntingiz bilan tizimga kiring. /start ni bosing.");
+                return bot.sendMessage(chatId, "⚠️ **Botdan foydalanish uchun avval Telegram akkauntingiz bilan tizimga kiring. /start ni bosing.**");
             }
         }
 
@@ -70,7 +70,7 @@ module.exports = (bot) => {
             if (!phoneRaw) return;
             try {
                 const phoneNumber = normalizePhoneInput(phoneRaw);
-                if (phoneNumber.length < 7) throw new Error("Noto'g'ri telefon raqami. Iltimos, xalqaro formatda kiriting (Masalan: +998991234567)");
+                if (phoneNumber.length < 7) throw new Error("**Noto'g'ri telefon raqami. Iltimos, xalqaro formatda kiriting (Masalan: +998991234567)**");
 
                 const isAdditional = state.isAdditional || false;
                 const isReyd = state.isReyd || false;
@@ -78,7 +78,7 @@ module.exports = (bot) => {
                 await initAuth(chatId, phoneNumber, bot, isAdditional, isReyd);
                 global.userStates[chatId] = { step: 'WAITING_CODE', phoneNumber, isAdditional, isReyd };
             } catch (e) {
-                bot.sendMessage(chatId, `❌ Xatolik: ${e.message}\n\nQayta urinib ko'ring (Telefon raqam yuboring):`, {
+                bot.sendMessage(chatId, `❌ **Xatolik: ${e.message}\n\nQayta urinib ko'ring (Telefon raqam yuboring):**`, {
                     reply_markup: getPhoneShareKeyboard()
                 });
             }
@@ -110,7 +110,7 @@ module.exports = (bot) => {
                 await User.update({ status: 'approved', expireAt, expiryWarningSent: false }, { where: { chatId: state.targetId } }); 
                 triggerBackup('admin_approve', true);
                 bot.sendMessage(chatId, `✅ Tasdiqlandi! Muddat: ${text}`); 
-                bot.sendMessage(state.targetId, `🎉 Siz admin tomonidan tasdiqlandingiz! \n\n 🔰 Tarif: ${text} \n Endi /start ni bosib ro'yxatdan o'tishingiz mumkin.`); 
+                bot.sendMessage(state.targetId, `**🎉 Siz admin tomonidan tasdiqlandingiz! \n\n 🔰 Tarif: ${text} \n Endi /start ni bosib ro'yxatdan o'tishingiz mumkin.**`); 
                 delete global.userStates[chatId]; 
                 return;
             } 
@@ -172,7 +172,7 @@ module.exports = (bot) => {
                 global.userStates[chatId] = { step: 'WAITING_AVTOUSER_LIMIT', type: state.type, groupLink: groupId, groupTitle: title };
                 await bot.sendMessage(
                     chatId,
-                    `✅ **${title}** tanlandi.\n\n🔢 Qancha xabar tarixi o'qilsin?`,
+                    `✅ **${title} tanlandi.\n\n🔢 Qancha xabar tarixi o'qilsin?**`,
                     { 
                         parse_mode: "Markdown", 
                         ...removeKeyboardMarkup(),
@@ -192,7 +192,7 @@ module.exports = (bot) => {
             global.userStates[chatId] = { step: 'WAITING_AVTOUSER_LIMIT', type: state.type, groupLink: text.trim() };
             await bot.sendMessage(
                 chatId,
-                "🔢 Qancha xabar tarixi o'qilsin?",
+                "🔢 **Qancha xabar tarixi o'qilsin?**",
                 { 
                     parse_mode: "Markdown", 
                     ...removeKeyboardMarkup(),
@@ -237,10 +237,10 @@ module.exports = (bot) => {
             
             delete global.userStates[chatId];
             
-            bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlandi...**\nBiroz vaqt olishi mumkin **Iltimos** sabrli bo'ling.");
+            bot.sendMessage(chatId, "⏳ **Userlarni yig'ish boshlandi...\nBiroz vaqt olishi mumkin **Iltimos** sabrli bo'ling.**");
             
             scrapeUsers(chatId, groupLink, limit, bot).catch(err => {
-                bot.sendMessage(chatId, `❌ Xatolik: Guruh linki eskirgan bo'lishi mumkin.\nGuruha borligingizni tekshiring.`);
+                bot.sendMessage(chatId, `❌ **Xatolik: Guruh linki eskirgan bo'lishi mumkin.\nGuruha borligingizni tekshiring.**`);
             });
             return;
         }
@@ -249,12 +249,12 @@ module.exports = (bot) => {
             if (msg.chat_shared && msg.chat_shared.request_id === REYD_CHAT_REQUEST_ID) {
                 const { id, title } = parseSharedGroup(msg.chat_shared);
                 global.userStates[chatId] = { ...state, step: 'WAITING_REYD_TEXT', target: id, groupTitle: title };
-                await bot.sendMessage(chatId, "📩 Reyd xabarini (matn yoki stiker) yuboring:", removeKeyboardMarkup());
+                await bot.sendMessage(chatId, "📩 **Reyd xabarini (matn yoki stiker) yuboring:**", removeKeyboardMarkup());
                 return;
             }
             if (!text) return;
             global.userStates[chatId] = { ...state, step: 'WAITING_REYD_TEXT', target: text.trim() };
-            await bot.sendMessage(chatId, "📩 Reyd xabarini (matn yoki stiker) yuboring:", removeKeyboardMarkup());
+            await bot.sendMessage(chatId, "📩 **Reyd xabarini (matn yoki stiker) yuboring:**", removeKeyboardMarkup());
             return;
         } else if (state.step === 'WAITING_REYD_TEXT') {
             let stickerPath = null;
@@ -265,11 +265,11 @@ module.exports = (bot) => {
                     stickerPath = await bot.downloadFile(msg.sticker.file_id, tempDir);
                 } catch (err) {
                     console.error("Stiker yuklash xatosi:", err.message);
-                    return bot.sendMessage(chatId, "❌ Stiker yuklashda xatolik yuz berdi. Qaytadan urinib ko'ring.");
+                    return bot.sendMessage(chatId, "❌ **Stiker yuklashda xatolik yuz berdi. Qaytadan urinib ko'ring.**");
                 }
             }
             global.userStates[chatId] = { ...state, step: 'WAITING_REYD_LIMIT', reydMsg: msg, stickerPath };
-            bot.sendMessage(chatId, "🔢 Nechta xabar yuborilsin? (Maksimum 500):");
+            bot.sendMessage(chatId, "🔢 **Nechta xabar yuborilsin? (Maksimum 500):**");
         } else if (state.step === 'WAITING_REYD_LIMIT') {
             if (!text) return;
             const limit = parseInt(text) || 10;
@@ -277,10 +277,10 @@ module.exports = (bot) => {
             global.userStates[chatId] = { ...reydData, step: 'CONFIRM_REYD' };
             
             const reydInfo = `🛡 **Reyd Ma'lumotlari:**\n\n` +
-                `📍 Nishon: ${reydData.groupTitle || reydData.target}\n` +
-                `🔢 Soni: ${reydData.limit} ta\n` +
-                `📩 Xabar turi: ${reydData.reydMsg.sticker ? "Stiker" : "Matn"}\n\n` +
-                `Tayyormisiz? "Boshlash" tugmasini bosing.`;
+                `📍 **Nishon:** ${reydData.groupTitle || reydData.target}\n` +
+                `🔢 **Soni:** ${reydData.limit} ta\n` +
+                `📩 **Xabar turi:** ${reydData.reydMsg.sticker ? "Stiker" : "Matn"}\n\n` +
+                `**Tayyormisiz? "Boshlash" tugmasini bosing.**`;
 
             bot.sendMessage(chatId, reydInfo, {
                 parse_mode: 'Markdown',
@@ -296,14 +296,14 @@ module.exports = (bot) => {
         if (state.step === 'WAITING_REK_USERS') {
             if (!text) return;
             global.userStates[chatId] = { step: 'WAITING_REK_TEXT', usersList: text };
-            bot.sendMessage(chatId, "✍️ Reklama xabarini yuboring (Matn, rasm, stiker va h.k.):");
+            bot.sendMessage(chatId, "✍️ **Reklama xabarini yuboring (Matn, rasm, stiker va h.k.):**");
         } else if (state.step === 'WAITING_REK_TEXT') {
             global.userStates[chatId] = { ...state, step: 'CONFIRM_REK', reklamaMsg: msg };
             
             const rekInfo = `📢 **Reklama Ma'lumotlari:**\n\n` +
-                `👥 Userlar soni: ${state.usersList.split(/\s+/).filter(u => u.startsWith('@')).length} ta\n` +
-                `📩 Xabar turi: ${msg.photo ? "Rasm" : (msg.sticker ? "Stiker" : (msg.video ? "Video" : "Matn"))}\n\n` +
-                `Tayyormisiz? "Boshlash" tugmasini bosing.`;
+                `👥 **Userlar soni:** ${state.usersList.split(/\s+/).filter(u => u.startsWith('@')).length} ta\n` +
+                `📩 **Xabar turi:** ${msg.photo ? "Rasm" : (msg.sticker ? "Stiker" : (msg.video ? "Video" : "Matn"))}\n\n` +
+                `**Tayyormisiz? "Boshlash" tugmasini bosing.**`;
 
             bot.sendMessage(chatId, rekInfo, {
                 parse_mode: 'Markdown',
@@ -322,7 +322,7 @@ module.exports = (bot) => {
                 global.userStates[chatId] = { ...state, step: 'WAITING_UTAG_SETUP', groupLink: id, groupTitle: title };
                 await bot.sendMessage(chatId, "⏳", removeKeyboardMarkup()).catch(() => {});
                 await bot.sendMessage(chatId,
-                    `📍 **${title}**\n\nKimlarni tag qilamiz?\n• 🟢 Faqat online\n• 👥 Hammani\n\n• Yoki **faqat raqam** yuboring (masalan: 50)`,
+                    `📍 **${title}**\n\n**Kimlarni tag qilamiz?\n• 🟢 Faqat online\n• 👥 Hammani\n\n• Yoki **faqat raqam** yuboring (masalan: 50)**`,
                     { parse_mode: 'Markdown', ...getUtagSetupKeyboard() }
                 );
                 return;
@@ -331,7 +331,7 @@ module.exports = (bot) => {
             global.userStates[chatId] = { ...state, step: 'WAITING_UTAG_SETUP', groupLink: text.trim() };
             await bot.sendMessage(chatId, "⏳", removeKeyboardMarkup()).catch(() => {});
             await bot.sendMessage(chatId,
-                "Kimlarni tag qilamiz?\n• 🟢 Faqat online\n• 👥 Hammani\n\n• Yoki **faqat raqam** yuboring (masalan: 50)",
+                "**Kimlarni tag qilamiz?\n• 🟢 Faqat online\n• 👥 Hammani\n\n• Yoki **faqat raqam** yuboring (masalan: 50)**",
                 { parse_mode: 'Markdown', ...getUtagSetupKeyboard() }
             );
             return;
@@ -399,7 +399,7 @@ module.exports = (bot) => {
             }
             global.userStates[chatId] = { ...state, step: 'WAITING_BAN_SPEED', filter: 'all', limit };
             const { getBanSpeedKeyboard } = require('../utils/helpers');
-            await bot.sendMessage(chatId, "⚙️ **Tezlikni tanlang:**\n\n🐢 Sekin — eng xavfsiz\n⚡ O'rtacha — muvozanat\n🚀 Tez — tezroq, lekin xavfli", {
+            await bot.sendMessage(chatId, "⚙️ **Tezlikni tanlang:\n\n🐢 Sekin — eng xavfsiz\n⚡ O'rtacha — muvozanat\n🚀 Tez — tezroq, lekin xavfli**", {
                 parse_mode: "Markdown",
                 ...getBanSpeedKeyboard()
             });

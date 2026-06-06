@@ -107,7 +107,7 @@ module.exports = (bot) => {
         if (!isAdminAction && !allowedCallbacks.includes(data)) {
             if (!user || !user.session) {
                 await safeAnswer({ 
-                    text: "⚠️ Botdan foydalanish uchun avval Telegram akkauntingiz bilan tizimga kiring. /start ni bosing.", 
+                    text: "⚠️ **Botdan foydalanish uchun avval Telegram akkauntingiz bilan tizimga kiring. /start ni bosing.**", 
                     show_alert: true 
                 });
                 return;
@@ -127,7 +127,7 @@ module.exports = (bot) => {
         // --- 2. SUBSCRIPTION CHECK ---
         const isMember = await checkMembership(bot, chatId);
         if (!isMember && data !== "check_subscription") {
-            await safeAnswer({ text: "⚠️ Botdan foydalanish uchun avval kanallarga a'zo bo'ling!", show_alert: true });
+            await safeAnswer({ text: "⚠️ **Botdan foydalanish uchun avval kanallarga a'zo bo'ling!**", show_alert: true });
             return sendSubscriptionAsk(bot, chatId);
         }
 
@@ -163,7 +163,7 @@ module.exports = (bot) => {
             const isEnabled = user.avtoAlmaz;
             const statusText = isEnabled ? "🟢 Yoqilgan" : "🔴 O'chirilgan";
             
-            const text = `💎 **Avto Almaz**\n\n🤖 Bot guruhlarga yuborilgan almaz va pullarni avto yig'adi.\n\nEslatma!! Almaz va pullar mafia botdagi xisobingizga qo'shiladi.\n\n⚙ Holati: ${statusText}`;
+            const text = `💎 **Avto Almaz\n\n🤖 Bot guruhlarga yuborilgan almaz va pullarni avto yig'adi.\n\nEslatma!! Almaz va pullar mafia botdagi xisobingizga qo'shiladi.\n\n⚙ Holati:** ${statusText}`;
             
             await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",

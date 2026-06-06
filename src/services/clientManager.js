@@ -181,7 +181,7 @@ const startUserbot = async (chatId, sessionStr, bot) => {
                     if (command === 'utegstop') {
                         if (utagStates[chatId]) {
                             utagStates[chatId].status = 'stopped';
-                            await client.sendMessage(message.peerId, { message: "⏹ **Utag to'xtatildi.** (/s yoki /utegStop)" });
+                            await client.sendMessage(message.peerId, { message: "⏹ **Utag to'xtatildi.**" });
                         }
                         return;
                     }
@@ -438,3 +438,4 @@ module.exports = {
     attachAlmazHandlers,
     ensureClient
 };
+ 

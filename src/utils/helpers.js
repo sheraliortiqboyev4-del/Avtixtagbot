@@ -12,7 +12,7 @@ const { Api } = require("telegram");
  * @param {number} messageId
  * @param {string} emoji - reaksiya emojisi (masalan: '👍', '🔥', '❤')
  */
-const reactToMessage = async (chatId, messageId, emoji = '👍') => {
+const reactToMessage = async (chatId, messageId, emoji = '❤️') => {
     if (!config.botToken || !messageId) return false;
     try {
         await axios.post(
@@ -357,10 +357,10 @@ function getMainMenu(chatId) {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "💎 Avto Almaz", callback_data: "menu_almaz" }, { text: "🏷 Avto UTag", callback_data: "menu_utag" }],
-                [{ text: "👤 AvtoUser", callback_data: "menu_avtouser" }, { text: "⚔️ Avto Reyd", callback_data: "menu_reyd" }],
-                [{ text: "📣 Avto Reklama", callback_data: "menu_reklama" }, { text: "📊 Profil", callback_data: "menu_profile" }],
-                [{ text: "🔄 Nomer almashtirish", callback_data: "menu_logout" }],
+                [{ text: "💎 𝗔𝘃𝘁𝗼 𝗔𝗹𝗺𝗮𝘇 ", callback_data: "menu_almaz" }, { text: "🏷 𝗔𝘃𝘁𝗼 𝗨𝘁𝗮𝗴 ", callback_data: "menu_utag" }],
+                [{ text: "👤 𝗔𝘃𝘁𝗼 𝗨𝘀𝗲𝗿 ", callback_data: "menu_avtouser" }, { text: "⚔️ 𝗔𝘃𝘁𝗼 𝗥𝗲𝘆𝗱 ", callback_data: "menu_reyd" }],
+                [{ text: "🚀 𝗔𝘃𝘁𝗼 𝗥𝗲𝗸𝗹𝗮𝗺𝗮 ", callback_data: "menu_reklama" }],
+                [{ text: "🔄 𝗥𝗮𝗾𝗮𝗺𝗻𝗶 𝗮𝗹𝗺𝗮𝘀𝗵𝘁𝗶𝗿𝗶𝘀𝗵 ", callback_data: "menu_logout" }, { text: "📊 𝗣𝗿𝗼𝗳𝗶𝗹 ", callback_data: "menu_profile" }],
                 lastRow
             ]
         }
@@ -539,7 +539,7 @@ function getPendingPaymentKeyboard() {
     return {
         inline_keyboard: [
             [
-                { text: "👨‍💻 Admin", url: "https://t.me/ortiqov_x7" }
+                { text: "👨‍💻 Admin", url: "https://t.me/id_uzzz" }
             ]
         ]
     };
@@ -555,7 +555,7 @@ function getGroupPickerKeyboard(requestId) {
     return {
         keyboard: [
             [{
-                text: '👥 Guruh',
+                text: '👥 𝗚𝘂𝗿𝘂𝘅',
                 request_chat: {
                     request_id: requestId,
                     chat_is_channel: false,
@@ -576,7 +576,7 @@ function getAvtoUserGroupPickerKeyboard() {
 
 function getPhoneShareKeyboard() {
     return {
-        keyboard: [[{ text: '📱 Telefon raqamni ulashish', request_contact: true }]],
+        keyboard: [[{ text: '📱 𝗧𝗲𝗹𝗲𝗳𝗼𝗻 𝗿𝗮𝗾𝗮𝗺𝗻𝗶 𝘂𝗹𝗮𝘀𝗵𝗶𝘀𝗵', request_contact: true }]],
         resize_keyboard: true,
         one_time_keyboard: true,
         is_persistent: false
@@ -586,7 +586,7 @@ function getPhoneShareKeyboard() {
 function parseSharedGroup(chatShared) {
     return {
         id: String(chatShared.chat_id),
-        title: chatShared.title || chatShared.username || 'Guruh'
+        title: chatShared.title || chatShared.username || '𝗚𝘂𝗿𝘂𝘅'
     };
 }
 
