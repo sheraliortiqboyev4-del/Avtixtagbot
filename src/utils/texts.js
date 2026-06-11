@@ -37,12 +37,12 @@ const errors = {
 const { BTN, BUTTON_EMOJI_IDS, BUTTON_STYLES } = require('./helpers');
 
 const adminButtons = {
-    approve1Month: (chatId) => BTN("✅ 1 Oy",     `admin_approve_1month_${chatId}`, { iconId: BUTTON_EMOJI_IDS.check,  style: BUTTON_STYLES.success }),
-    approveVIP:    (chatId) => BTN("👑 VIP",      `admin_approve_vip_${chatId}`,    { iconId: BUTTON_EMOJI_IDS.crown,  style: BUTTON_STYLES.success }),
-    approveCustom: (chatId) => BTN("✍️ Ixtiyoriy", `admin_approve_${chatId}`,        { iconId: BUTTON_EMOJI_IDS.custom, style: BUTTON_STYLES.primary }),
-    block:         (chatId) => BTN("🚫 Bloklash", `admin_block_${chatId}`,          { iconId: BUTTON_EMOJI_IDS.block,  style: BUTTON_STYLES.danger }),
+    approve1Month: (chatId) => BTN("1 Oy",     `admin_approve_1month_${chatId}`, { iconId: BUTTON_EMOJI_IDS.check,  style: BUTTON_STYLES.success }),
+    approveVIP:    (chatId) => BTN("VIP",      `admin_approve_vip_${chatId}`,    { iconId: BUTTON_EMOJI_IDS.crown,  style: BUTTON_STYLES.success }),
+    approveCustom: (chatId) => BTN("Ixtiyoriy", `admin_approve_${chatId}`,        { iconId: BUTTON_EMOJI_IDS.custom, style: BUTTON_STYLES.primary }),
+    block:         (chatId) => BTN("Bloklash", `admin_block_${chatId}`,          { iconId: BUTTON_EMOJI_IDS.block,  style: BUTTON_STYLES.danger }),
     contactAdmin:  (adminUsername = ADMIN_USERNAME) => BTN(
-        "👨‍💼 Admin bilan bog'lanish",
+        "Admin bilan bog'lanish",
         null,
         { url: `https://t.me/${adminUsername.replace('@', '')}`, iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary }
     )

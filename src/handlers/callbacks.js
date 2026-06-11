@@ -47,12 +47,12 @@ const buildUserListPage = (users, page, title, backCallback) => {
     }
 
     const navRow = [];
-    if (safePage > 0) navRow.push(BTN("⬅️ Orqaga", `${backCallback}_page_${safePage - 1}`, { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary }));
-    if (safePage < totalPages - 1) navRow.push(BTN("Keyingi ➡️", `${backCallback}_page_${safePage + 1}`, { style: BUTTON_STYLES.primary }));
+    if (safePage > 0) navRow.push(BTN("Orqaga", `${backCallback}_page_${safePage - 1}`, { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary }));
+    if (safePage < totalPages - 1) navRow.push(BTN("Keyingi", `${backCallback}_page_${safePage + 1}`, { style: BUTTON_STYLES.primary }));
 
     const keyboard = [];
     if (navRow.length > 0) keyboard.push(navRow);
-    keyboard.push([BTN("🏠 Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary })]);
+    keyboard.push([BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary })]);
 
     return { text, reply_markup: { inline_keyboard: keyboard } };
 };
@@ -194,13 +194,13 @@ module.exports = (bot) => {
         }
 
         if (data === "menu_avtouser") {
-            await safeEdit(chatId, messageId, "👥 **Avto User**\n\nQaysi usulda user yig'moqchisiz?", {
+            await safeEdit(chatId, messageId, "**Avto User**\n\nQaysi usulda user yig'moqchisiz?", {
                 parse_mode: "Markdown",
                 reply_markup: {
                     inline_keyboard: [
-                        [BTN("👥 Faol azolarni yig'ish",     "avtouser_active",  { iconId: BUTTON_EMOJI_IDS.share,   style: BUTTON_STYLES.primary })],
-                        [BTN("🏷 Mention azolarni yig'ish", "avtouser_mention", { iconId: BUTTON_EMOJI_IDS.utag,    style: BUTTON_STYLES.primary })],
-                        [BTN("🔙 Orqaga",                   "menu_back_main",   { iconId: BUTTON_EMOJI_IDS.back,    style: BUTTON_STYLES.primary })]
+                        [BTN("Faol azolarni yig'ish",     "avtouser_active",  { iconId: BUTTON_EMOJI_IDS.share,   style: BUTTON_STYLES.primary })],
+                        [BTN("Mention azolarni yig'ish", "avtouser_mention", { iconId: BUTTON_EMOJI_IDS.utag,    style: BUTTON_STYLES.primary })],
+                        [BTN("Orqaga",                   "menu_back_main",   { iconId: BUTTON_EMOJI_IDS.back,    style: BUTTON_STYLES.primary })]
                     ]
                 }
             });
@@ -258,14 +258,14 @@ module.exports = (bot) => {
         }
 
         if (data === "menu_reyd") {
-            const text = `⚔️ **Avto Reyd bo'limi**\n\nQuyidagilardan birini tanlang:\n\n📨 **Avto Xabar** — guruh yoki userga ko'p marta xabar/stiker yuborish.\n🚫 **Avto Ban** — guruh a'zolarini avtomatik ban qilish.`;
+            const text = `**Avto Reyd bo'limi**\n\nQuyidagilardan birini tanlang:\n\n**Avto Xabar** — guruh yoki userga ko'p marta xabar/stiker yuborish.\n**Avto Ban** — guruh a'zolarini avtomatik ban qilish.`;
             await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
                 reply_markup: {
                     inline_keyboard: [
-                        [BTN("📨 Avto Xabar", "reyd_message",   { iconId: BUTTON_EMOJI_IDS.reyd,  style: BUTTON_STYLES.primary })],
-                        [BTN("🚫 Avto Ban",   "ban_menu",       { iconId: BUTTON_EMOJI_IDS.block, style: BUTTON_STYLES.danger })],
-                        [BTN("🔙 Orqaga",     "menu_back_main", { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
+                        [BTN("Avto Xabar", "reyd_message",   { iconId: BUTTON_EMOJI_IDS.reyd,  style: BUTTON_STYLES.primary })],
+                        [BTN("Avto Ban",   "ban_menu",       { iconId: BUTTON_EMOJI_IDS.block, style: BUTTON_STYLES.danger })],
+                        [BTN("Orqaga",     "menu_back_main", { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
                     ]
                 }
             });
@@ -340,11 +340,11 @@ module.exports = (bot) => {
 
         if (data === "reyd_start") {
             if (!user.reydAccountMode) {
-                const text = "🛠 **Reyd rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
+                const text = "**Reyd rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
                 const buttons = [
-                    [BTN("👤 Faqat asosiy akkaunt", "reyd_set_mode_main", { iconId: BUTTON_EMOJI_IDS.user,  style: BUTTON_STYLES.primary })],
-                    [BTN("🌐 Barcha akkauntlar",   "reyd_set_mode_all",  { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })],
-                    [BTN("🔙 Orqaga",              "reyd_message",       { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
+                    [BTN("Faqat asosiy akkaunt", "reyd_set_mode_main", { iconId: BUTTON_EMOJI_IDS.user,  style: BUTTON_STYLES.primary })],
+                    [BTN("Barcha akkauntlar",   "reyd_set_mode_all",  { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })],
+                    [BTN("Orqaga",              "reyd_message",       { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
                 ];
                 await safeEdit(chatId, messageId, text, {
                     parse_mode: "Markdown",
@@ -427,17 +427,17 @@ module.exports = (bot) => {
                     parse_mode: "Markdown",
                     reply_markup: {
                         inline_keyboard: [
-                            [BTN("✅ Boshlash",      "ban_start_confirm", { iconId: BUTTON_EMOJI_IDS.check,  style: BUTTON_STYLES.success })],
-                            [BTN("❌ Bekor qilish", "ban_cancel",        { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]
+                            [BTN("Boshlash",     "ban_start_confirm", { iconId: BUTTON_EMOJI_IDS.check,  style: BUTTON_STYLES.success })],
+                            [BTN("Bekor qilish", "ban_cancel",        { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]
                         ]
                     }
                 });
             } catch (e) {
                 global.userStates[chatId] = null;
                 delete global.userStates[chatId];
-                await safeEdit(chatId, messageId, `❌ **Banlab bo'lmaydi:**\n\n${e.message}`, {
+                await safeEdit(chatId, messageId, `**Banlab bo'lmaydi:**\n\n${e.message}`, {
                     parse_mode: "Markdown",
-                    reply_markup: { inline_keyboard: [[BTN("🔙 Orqaga", "menu_reyd", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] }
+                    reply_markup: { inline_keyboard: [[BTN("Orqaga", "menu_reyd", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] }
                 });
             }
             return;
@@ -463,8 +463,8 @@ module.exports = (bot) => {
         if (data === "ban_cancel") {
             delete global.userStates[chatId];
             await safeAnswer({ text: "Bekor qilindi" });
-            return await safeEdit(chatId, messageId, "❌ Avto Ban bekor qilindi.", {
-                reply_markup: { inline_keyboard: [[BTN("🔙 Orqaga", "menu_reyd", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] }
+            return await safeEdit(chatId, messageId, "Avto Ban bekor qilindi.", {
+                reply_markup: { inline_keyboard: [[BTN("Orqaga", "menu_reyd", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] }
             });
         }
 
@@ -555,11 +555,11 @@ module.exports = (bot) => {
 
         if (data === "reklama_start") {
             if (!user.reklamaAccountMode) {
-                const text = "🛠 **Reklama rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
+                const text = "**Reklama rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
                 const buttons = [
-                    [BTN("👤 Faqat asosiy akkaunt", "reklama_set_mode_main", { iconId: BUTTON_EMOJI_IDS.user,  style: BUTTON_STYLES.primary })],
-                    [BTN("🌐 Barcha akkauntlar",   "reklama_set_mode_all",  { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })],
-                    [BTN("🔙 Orqaga",              "menu_reklama",          { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
+                    [BTN("Faqat asosiy akkaunt", "reklama_set_mode_main", { iconId: BUTTON_EMOJI_IDS.user,  style: BUTTON_STYLES.primary })],
+                    [BTN("Barcha akkauntlar",   "reklama_set_mode_all",  { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })],
+                    [BTN("Orqaga",              "menu_reklama",          { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
                 ];
                 await safeEdit(chatId, messageId, text, {
                     parse_mode: "Markdown",
@@ -598,7 +598,7 @@ module.exports = (bot) => {
         if (data === "reklama_cancel") {
             await safeAnswer();
             delete global.userStates[chatId];
-            return await safeEdit(chatId, messageId, "❌ Reklama bekor qilindi.", { reply_markup: { inline_keyboard: [[BTN("🔙 Orqaga", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] } });
+            return await safeEdit(chatId, messageId, "Reklama bekor qilindi.", { reply_markup: { inline_keyboard: [[BTN("Orqaga", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] } });
         }
 
         if (data === "reklama_spam_continue") {
@@ -638,9 +638,9 @@ module.exports = (bot) => {
 
             const getReklamaButtons = (status) => {
                 const buttons = [];
-                if (status === 'running') buttons.push(BTN("⏸ Pauza",         "reklama_pause",  { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
-                if (status === 'paused')  buttons.push(BTN("▶️ Davom etish",  "reklama_resume", { iconId: BUTTON_EMOJI_IDS.play,  style: BUTTON_STYLES.success }));
-                buttons.push(BTN("⏹ To'xtatish", "reklama_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
+                if (status === 'running') buttons.push(BTN("Pauza",       "reklama_pause",  { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
+                if (status === 'paused')  buttons.push(BTN("Davom etish", "reklama_resume", { iconId: BUTTON_EMOJI_IDS.play,  style: BUTTON_STYLES.success }));
+                buttons.push(BTN("To'xtatish", "reklama_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
                 return { reply_markup: { inline_keyboard: [buttons] } };
             };
 
@@ -685,7 +685,7 @@ module.exports = (bot) => {
         if (data === "reyd_cancel") {
             await safeAnswer();
             delete global.userStates[chatId];
-            return await safeEdit(chatId, messageId, "❌ Reyd bekor qilindi.", { reply_markup: { inline_keyboard: [[BTN("🔙 Orqaga", "reyd_message", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] } });
+            return await safeEdit(chatId, messageId, "Reyd bekor qilindi.", { reply_markup: { inline_keyboard: [[BTN("Orqaga", "reyd_message", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] } });
         }
 
         if (data.startsWith("reyd_")) {
@@ -699,9 +699,9 @@ module.exports = (bot) => {
 
             const getReydButtons = (status) => {
                 const buttons = [];
-                if (status === 'running') buttons.push(BTN("⏸ Pauza",         "reyd_pause",  { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
-                if (status === 'paused')  buttons.push(BTN("▶️ Davom etish",  "reyd_resume", { iconId: BUTTON_EMOJI_IDS.play,  style: BUTTON_STYLES.success }));
-                buttons.push(BTN("⏹ To'xtatish", "reyd_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
+                if (status === 'running') buttons.push(BTN("Pauza",       "reyd_pause",  { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
+                if (status === 'paused')  buttons.push(BTN("Davom etish", "reyd_resume", { iconId: BUTTON_EMOJI_IDS.play,  style: BUTTON_STYLES.success }));
+                buttons.push(BTN("To'xtatish", "reyd_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
                 return { reply_markup: { inline_keyboard: [buttons] } };
             };
 
@@ -752,11 +752,11 @@ module.exports = (bot) => {
 
         if (data === "utag_start_new") {
             if (!user.utagAccountMode) {
-                const text = "🛠 **Utag rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
+                const text = "**Utag rejimini tanlang:**\n\nSiz bir marta rejimni tanlasangiz, bot uni eslab qoladi. Keyinchalik uni sozlamalar orqali o'zgartirishingiz mumkin.";
                 const buttons = [
-                    [BTN("👤 Faqat asosiy akkaunt", "utag_set_mode_main", { iconId: BUTTON_EMOJI_IDS.user,  style: BUTTON_STYLES.primary })],
-                    [BTN("🌐 Barcha akkauntlar",   "utag_set_mode_all",  { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })],
-                    [BTN("🔙 Orqaga",              "menu_utag",          { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
+                    [BTN("Faqat asosiy akkaunt", "utag_set_mode_main", { iconId: BUTTON_EMOJI_IDS.user,  style: BUTTON_STYLES.primary })],
+                    [BTN("Barcha akkauntlar",   "utag_set_mode_all",  { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })],
+                    [BTN("Orqaga",              "menu_utag",          { iconId: BUTTON_EMOJI_IDS.back,  style: BUTTON_STYLES.primary })]
                 ];
                 await safeEdit(chatId, messageId, text, {
                     parse_mode: "Markdown",
@@ -855,7 +855,7 @@ module.exports = (bot) => {
             user.utagHistory.forEach((h, index) => {
                 buttons.push([{ text: `📍 ${h.title}`, callback_data: `utag_re_${index}` }]);
             });
-            buttons.push([BTN("🔙 Orqaga", "menu_utag", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]);
+            buttons.push([BTN("Orqaga", "menu_utag", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]);
 
             await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
@@ -909,9 +909,9 @@ module.exports = (bot) => {
 
             const getUtagButtons = (status) => {
                 const buttons = [];
-                if (status === 'running') buttons.push(BTN("⏸ Pauza",         "utag_pause",  { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
-                if (status === 'paused')  buttons.push(BTN("▶️ Davom etish",  "utag_resume", { iconId: BUTTON_EMOJI_IDS.play,  style: BUTTON_STYLES.success }));
-                buttons.push(BTN("⏹ To'xtatish", "utag_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
+                if (status === 'running') buttons.push(BTN("Pauza",       "utag_pause",  { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
+                if (status === 'paused')  buttons.push(BTN("Davom etish", "utag_resume", { iconId: BUTTON_EMOJI_IDS.play,  style: BUTTON_STYLES.success }));
+                buttons.push(BTN("To'xtatish", "utag_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
                 return { reply_markup: { inline_keyboard: [buttons] } };
             };
 
@@ -939,8 +939,8 @@ module.exports = (bot) => {
                     parse_mode: "Markdown",
                     reply_markup: {
                         inline_keyboard: [
-                            [BTN("✅ Tasdiqlash",   "logout_confirm", { iconId: BUTTON_EMOJI_IDS.check,  style: BUTTON_STYLES.success })],
-                            [BTN("❌ Bekor qilish", "logout_cancel",  { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]
+                            [BTN("Tasdiqlash",   "logout_confirm", { iconId: BUTTON_EMOJI_IDS.check,  style: BUTTON_STYLES.success })],
+                            [BTN("Bekor qilish", "logout_cancel",  { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]
                         ]
                     }
                 }
@@ -998,7 +998,7 @@ module.exports = (bot) => {
             await safeEdit(chatId, messageId, text, {
                 parse_mode: "Markdown",
                 reply_markup: {
-                    inline_keyboard: [[BTN("🔙 Orqaga", "menu_back_main", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
+                    inline_keyboard: [[BTN("Orqaga", "menu_back_main", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
                 }
             });
             return await safeAnswer();
@@ -1043,7 +1043,7 @@ module.exports = (bot) => {
 
             await safeEdit(chatId, messageId, statsText, {
                 parse_mode: "Markdown",
-                reply_markup: { inline_keyboard: [[BTN("🔙 Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] }
+                reply_markup: { inline_keyboard: [[BTN("Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]] }
             });
             return await safeAnswer();
         }
@@ -1094,7 +1094,7 @@ module.exports = (bot) => {
                         [texts.adminButtons.approveVIP(targetId)],
                         [texts.adminButtons.approveCustom(targetId)],
                         [texts.adminButtons.block(targetId)],
-                        [BTN("🔙 Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]
+                        [BTN("Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]
                     ] 
                 } 
             });
@@ -1151,9 +1151,9 @@ module.exports = (bot) => {
             global.userStates[chatId] = { step: 'WAITING_BROADCAST' };
             await safeAnswer();
             try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-            return bot.sendMessage(chatId, "📢 Barchaga yuboriladigan xabarni yuboring (matn, rasm, video va h.k.):", {
+            return bot.sendMessage(chatId, "Barchaga yuboriladigan xabarni yuboring (matn, rasm, video va h.k.):", {
                 reply_markup: {
-                    inline_keyboard: [[BTN("🔙 Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
+                    inline_keyboard: [[BTN("Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
                 }
             });
         }
@@ -1171,8 +1171,8 @@ module.exports = (bot) => {
             }
             
             const buttons = [
-                [BTN("➕ Kanal qo'shish", "admin_add_channel", { iconId: BUTTON_EMOJI_IDS.add,  style: BUTTON_STYLES.success })],
-                [BTN("🔙 Orqaga",         "admin_panel",       { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]
+                [BTN("Kanal qo'shish", "admin_add_channel", { iconId: BUTTON_EMOJI_IDS.add,  style: BUTTON_STYLES.success })],
+                [BTN("Orqaga",         "admin_panel",       { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]
             ];
 
             await safeEdit(chatId, messageId, channelList, {
@@ -1186,9 +1186,9 @@ module.exports = (bot) => {
             global.userStates[chatId] = { step: 'WAITING_CHANNEL_ID' };
             await safeAnswer();
             try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-            return bot.sendMessage(chatId, "📢 Kanal ID sini yuboring (masalan: -1001234567890):", {
+            return bot.sendMessage(chatId, "Kanal ID sini yuboring (masalan: -1001234567890):", {
                 reply_markup: {
-                    inline_keyboard: [[BTN("🔙 Orqaga", "admin_channels", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
+                    inline_keyboard: [[BTN("Orqaga", "admin_channels", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
                 }
             });
         }
@@ -1238,9 +1238,9 @@ module.exports = (bot) => {
             global.userStates[chatId] = { step: 'WAITING_TIME', targetId };
             await safeAnswer();
             try { await bot.deleteMessage(chatId, messageId); } catch (e) {}
-            return bot.sendMessage(chatId, "⏳ Muddatni kiriting (masalan: 1 oy, 2 kun, 1 soat):", {
+            return bot.sendMessage(chatId, "Muddatni kiriting (masalan: 1 oy, 2 kun, 1 soat):", {
                 reply_markup: {
-                    inline_keyboard: [[BTN("🔙 Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
+                    inline_keyboard: [[BTN("Orqaga", "admin_panel", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]]
                 }
             });
         }
