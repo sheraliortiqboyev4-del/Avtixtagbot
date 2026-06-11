@@ -8,7 +8,7 @@ const { TelegramClient, Api } = require("telegram");
 const { StringSession } = require("telegram/sessions");
 const config = require("../../config");
 const User = require("../../models/User");
-const { escapeHTML, upsertUtagHistory, normalizeUtagGroupId, getMainMenu } = require('../../utils/helpers');
+const { escapeHTML, upsertUtagHistory, normalizeUtagGroupId, getMainMenu, buildUtagMessage, convertToGramJsEntities } = require('../../utils/helpers');
 const { utagStates, PROMO_UTAG } = require('../userbotState');
 const { ensureClient } = require('../clientManager');
 
@@ -89,20 +89,38 @@ const cacheUtagParticipant = async (client, participant) => {
     }
 };
 
-const sendUtagToParticipant = async (client, groupEntity, participant, extraText, fallbackClient = null) => {
+const sendUtagToParticipant = async (client, groupEntity, participant, extraText, opts = {}, fallbackClient = null) => {
     if (participant.bot || participant.deleted) return false;
+    const { useEmojiMap = false, customEntities = null } = opts;
 
     const send = async (activeClient) => {
+        // Username bor — oddiy @mention
         if (participant.username) {
-            await activeClient.sendMessage(groupEntity, { message: `@${participant.username}${extraText}` });
+            const mentionText = `@${participant.username}`;
+            const { cleanText, entities } = buildUtagMessage(mentionText, extraText, { useEmojiMap, customEntities });
+            const tgEntities = convertToGramJsEntities(entities);
+            await activeClient.sendMessage(groupEntity, {
+                message: cleanText,
+                formattingEntities: tgEntities && tgEntities.length ? tgEntities : undefined
+            });
             return;
         }
+
+        // Username yo'q — text_mention bilan bosiladigan ism
         await cacheUtagParticipant(activeClient, participant).catch(() => {});
         const name = participant.firstName || 'Foydalanuvchi';
         const userId = participant.id?.toString?.() || String(participant.id);
+        const accessHash = participant.accessHash != null ? participant.accessHash.toString() : null;
+
+        const { cleanText, entities } = buildUtagMessage(name, extraText, {
+            mentionUser: { id: userId, accessHash },
+            useEmojiMap,
+            customEntities
+        });
+        const tgEntities = convertToGramJsEntities(entities);
         await activeClient.sendMessage(groupEntity, {
-            message: `<a href="tg://user?id=${userId}">${escapeHTML(name)}</a>${extraText}`,
-            parseMode: 'html'
+            message: cleanText,
+            formattingEntities: tgEntities && tgEntities.length ? tgEntities : undefined
         });
     };
 
@@ -155,6 +173,7 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
     const {
         limit = 0,
         tagText = null,
+        tagEntities = null,
         mode = 'only_mention',
         memberFilter = 'all',
         isCommand = false,
@@ -245,6 +264,18 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
 
         const participants = await fetchUtagParticipants(mainClient, entity, memberFilter, parseInt(limit, 10) || 0);
 
+        // Multi-client warm-up: har bir qo'shimcha clientni getParticipants orqali
+        // accessHash bilan to'ldiramiz, shunda text_mention link'lari ishlaydi
+        if (clients.length > 1) {
+            for (let i = 1; i < clients.length; i++) {
+                try {
+                    await fetchUtagParticipants(clients[i], entity, memberFilter, parseInt(limit, 10) || 0);
+                } catch (e) {
+                    console.error(`[UTag] Akkaunt #${i + 1} cache xato:`, e.message);
+                }
+            }
+        }
+
         const groupId = normalizeUtagGroupId(entity.id?.toString() || groupLink);
         const groupTitle = presetTitle || entity.title || entity.username || "Guruh";
         const historyLink = /^-?\d+$/.test(String(groupLink).trim())
@@ -258,6 +289,7 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
             mode,
             limit: parseInt(limit, 10) || 0,
             tagText: mode === 'custom' ? tagText : null,
+            tagEntities: mode === 'custom' ? tagEntities : null,
             memberFilter
         });
         await User.update({ utagHistory: history }, { where: { chatId } });
@@ -295,17 +327,24 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
             try {
                 const tagNumber = count + 1;
                 let extraText = '';
+                const sendOpts = {};
+
                 if (mode === 'random_words') {
                     extraText = ' ' + (shuffledMessages[count % shuffledMessages.length] || "");
+                    sendOpts.useEmojiMap = true; // bot so'zlari uchun premium emoji
                 } else if (mode === 'custom' && tagText) {
                     extraText = ' ' + tagText;
+                    if (tagEntities && tagEntities.length > 0) {
+                        sendOpts.customEntities = tagEntities;
+                    }
                 }
+                // only_mention rejimida hech narsa qo'shilmaydi — faqat @username
 
                 if (tagNumber % 10 === 0) {
                     extraText += ` ${PROMO_UTAG()}`;
                 }
 
-                await sendUtagToParticipant(currentClient, entity, p, extraText, mainClient);
+                await sendUtagToParticipant(currentClient, entity, p, extraText, sendOpts, mainClient);
 
                 count++;
                 utagStates[chatId].count = count;

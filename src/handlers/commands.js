@@ -58,7 +58,8 @@ module.exports = (bot) => {
         const username = msg.from.username;
 
         if (!getDbReady()) {
-            return bot.sendMessage(chatId, '⏳ Bot hali yuklanmoqda. Iltimos, 10 soniyadan keyin qayta /start bosing.');
+            const texts = require('../utils/texts');
+            return bot.sendMessage(chatId, texts.errors.botLoading);
         }
     
         let user = await findUserByChatId(chatId); 
@@ -83,55 +84,52 @@ module.exports = (bot) => {
         }
     
         if (user.status === 'blocked') {
-            const blockedText =
-                `**⚠ Sizning foydalanish muddatingiz tugagan.Botdan foydalanishni davom ettirish uchun to'lovni amalga oshiring va botni qayta ishga tushiring.\n\n👨‍💼 Admin: @ortiqov_x7**`;
+            const texts = require('../utils/texts');
+            const blockedText = texts.payment.blocked(texts.admin.username);
             bot.sendMessage(chatId, blockedText, {
+                parse_mode: "Markdown",
                 reply_markup: getPendingPaymentKeyboard()
             });
 
             // Adminga xabar yuborish
             const now = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
-            const adminNotifyText = `🆕 **Yangi foydalanuvchi!\n\n👤 Ism: ${name}\n🆔 ID: \`${chatId}\`\n📅 Vaqt: ${now}\n\nBlokdan ochish uchun tugmani bosing:**`;
+            const adminNotifyText = `🆕 **Yangi foydalanuvchi!**\n\n👤 Ism: ${name}\n🆔 ID: \`${chatId}\`\n📅 Vaqt: ${now}\n\nBlokdan ochish uchun tugmani bosing:`;
             bot.sendMessage(config.adminId, adminNotifyText, {
                 parse_mode: "Markdown",
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "✅ 1 Oy", callback_data: `admin_approve_1month_${chatId}` }],
-                        [{ text: "👑 VIP", callback_data: `admin_approve_vip_${chatId}` }],
-                        [{ text: "✍️ Ixtiyoriy", callback_data: `admin_approve_${chatId}` }]
+                        [texts.adminButtons.approve1Month(chatId)],
+                        [texts.adminButtons.approveVIP(chatId)],
+                        [texts.adminButtons.approveCustom(chatId)]
                     ]
                 }
             });
             return;
         }
 
-        if (user.status !== 'approved') { 
+        if (user.status !== 'approved') {
+            const texts = require('../utils/texts');
             // Adminga xabar yuborish
-            const isPending = user.status === 'pending';
-            const adminHeader = isPending ? "🆕 **Yangi foydalanuvchi!**" : "🆕 **Yangi foydalanuvchi!**";
-            const adminText = `${adminHeader}\n\nIsm: ${name}\nUsername: @${username || 'yo\'q'}\nID: \`${chatId}\`\n\nTasdiqlash uchun quyidagi tugmani bosing:`;
+            const adminText = `🆕 **Yangi foydalanuvchi!**\n\nIsm: ${name}\nUsername: @${username || 'yo\'q'}\nID: \`${chatId}\`\n\nTasdiqlash uchun quyidagi tugmani bosing:`;
             bot.sendMessage(config.adminId, adminText, {
+                parse_mode: "Markdown",
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "✅ 1 Oy", callback_data: `admin_approve_1month_${chatId}` }],
-                        [{ text: "👑 VIP", callback_data: `admin_approve_vip_${chatId}` }],
-                        [{ text: "✍️ Ixtiyoriy", callback_data: `admin_approve_${chatId}` }],
-                        [{ text: "🚫 Bloklash", callback_data: `admin_block_${chatId}` }]
+                        [texts.adminButtons.approve1Month(chatId)],
+                        [texts.adminButtons.approveVIP(chatId)],
+                        [texts.adminButtons.approveCustom(chatId)],
+                        [texts.adminButtons.block(chatId)]
                     ]
                 }
             });
 
-            const paymentAskText =
-                `**👋 Assalomu alaykum, Hurmatli ${name}!**\n\n` +
-                `**⚠ Siz botdan foydalanish uchun botning oylik tulovini amalga oshirmagansiz.**\n` +
-                `**⚠ Botdan foydalanish uchun admin orqali to'lov qiling!!!**\n\n` +
-                `**👨‍💼 Admin: @id_uzzz**`;
+            const paymentAskText = texts.payment.pending(name, texts.admin.username);
             await bot.sendMessage(chatId, paymentAskText, {
                 parse_mode: 'Markdown',
                 reply_markup: getPendingPaymentKeyboard()
             });
             return;
-        } 
+        }
     
         // 2. Auth Flow (Akkauntga kirish)
         if (user.session) {

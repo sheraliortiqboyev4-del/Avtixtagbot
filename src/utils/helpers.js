@@ -57,7 +57,20 @@ const convertToGramJsEntities = (entities) => {
             case 'code': return new Api.MessageEntityCode(args);
             case 'pre': return new Api.MessageEntityPre({ ...args, language: '' });
             case 'text_link': return new Api.MessageEntityTextUrl({ ...args, url: e.url });
-            case 'text_mention': return e.user ? new Api.MessageEntityMentionName({ ...args, userId: BigInt(e.user.id) }) : null;
+            case 'text_mention': {
+                if (!e.user) return null;
+                const userId = BigInt(e.user.id);
+                if (e.user.accessHash != null) {
+                    return new Api.InputMessageEntityMentionName({
+                        ...args,
+                        userId: new Api.InputUser({
+                            userId,
+                            accessHash: BigInt(e.user.accessHash)
+                        })
+                    });
+                }
+                return new Api.MessageEntityMentionName({ ...args, userId });
+            }
             case 'mention': return new Api.MessageEntityMention(args);
             case 'hashtag': return new Api.MessageEntityHashtag(args);
             case 'bot_command': return new Api.MessageEntityBotCommand(args);
@@ -69,6 +82,143 @@ const convertToGramJsEntities = (entities) => {
         }
     }).filter(Boolean);
 };
+
+// --- BUTTON STYLE/ICON KONSTANTALARI ---
+// Inline tugmalarda `icon_custom_emoji_id` (premium emoji) va `style` (rang).
+// IZOH: Bu maydonlarni Telegram qo'llab-quvvatlasa ishlaydi; qo'llab-quvvatlamasa
+// `text` ichidagi oddiy emoji ko'rinadi (BTN funksiyasi tekstga ham emoji qo'shadi).
+const BUTTON_EMOJI_IDS = {
+    almaz: '5427168083074628963',
+    utag: '5471901288448924312',
+    user: '5255883984151276991',
+    reyd: '5377725257081696849',
+    reklama: '5305548297312675223',
+    bonus: '5305687351173849819',
+    logout: '5305737159909581647',
+    profile: '5305587785241992785',
+    admin: '5472187029756332585',
+    help: '5366068097365066701',
+    back: '5352759161945867747',
+    check: '5269481695991580059',
+    cancel: '5269501757783819821',
+    settings: '5341715473882955310',
+    start: '5372917041193828849',
+    add: '5397916757333654639',
+    remove: '5445267414562389170',
+    history: '5197269100878907942',
+    random: '5305784520513954243',
+    custom: '5305557136355370145',
+    share: '5305733135525224451',
+    on: '5416081784641168838',
+    off: '5411225014148014586',
+    pause: '5359543311897998264',
+    play: '5348125953090403204',
+    stop: '5472030751648127392',
+    crown: '5217822164362739968',
+    block: '5472267631979405211'
+};
+
+const BUTTON_STYLES = {
+    primary: 'primary',
+    success: 'success',
+    danger: 'danger'
+};
+
+/**
+ * Inline tugma qurish helperi.
+ *   text         — tugma matni (oddiy emoji bilan)
+ *   callback_data— callback ma'lumoti
+ *   opts.iconId  — premium emoji ID (BUTTON_EMOJI_IDS.* dan)
+ *   opts.style   — 'primary' | 'success' | 'danger'
+ *   opts.url     — url tugma uchun (callback_data o'rniga)
+ */
+function BTN(text, callback_data, opts = {}) {
+    const btn = { text };
+    if (opts.url) {
+        btn.url = opts.url;
+    } else if (callback_data) {
+        btn.callback_data = callback_data;
+    }
+    if (opts.iconId) btn.icon_custom_emoji_id = opts.iconId;
+    if (opts.style) btn.style = opts.style;
+    return btn;
+}
+
+// --- UTAG (auto-tag) uchun custom emoji xaritasi ---
+const UTAG_EMOJI_MAP = {
+    '💎': '5427168083074628963',
+    '🦦': '5215290868660193057',
+    '🤨': '5384547500780176510',
+    '🧐': '5384389552577924673',
+    '🫂': '5377675240752926614',
+    '👀': '5396348377963589663',
+    '👊': '5377637926958868701',
+    '😁': '5377590870628106691',
+    '🥱': '5377564889623186510',
+    '😾': '5418107220629353248',
+    '😆': '5377512388301351619',
+    '🫣': '5384422322847048893',
+    '😅': '5377498825754430544',
+    '😎': '5377466364045904013',
+    '😂': '5377414456789450470',
+    '💥': '5354132205609396421',
+    '💬': '5188377234221450271'
+};
+
+/**
+ * Utag xabarini tayyorlash. 3 rejim:
+ *   1) Username yoki text_mention bilan boshlanadigan mention
+ *   2) Custom mode — foydalanuvchi entitylari (msg.entities) saqlanadi
+ *   3) Random_words mode — UTAG_EMOJI_MAP'dan custom_emoji entitylari yasaladi
+ */
+function buildUtagMessage(mentionText, extraText, opts = {}) {
+    const { mentionUser = null, useEmojiMap = false, customEntities = null } = opts;
+    const fullText = `${mentionText}${extraText || ''}`;
+    const entities = [];
+
+    // 1. Mention qismi (boshda)
+    if (mentionUser && mentionUser.id) {
+        entities.push({
+            type: 'text_mention',
+            offset: 0,
+            length: mentionText.length,
+            user: { id: mentionUser.id, accessHash: mentionUser.accessHash || null }
+        });
+    } else if (mentionText.startsWith('@')) {
+        entities.push({
+            type: 'mention',
+            offset: 0,
+            length: mentionText.length
+        });
+    }
+
+    // 2. Custom mode — foydalanuvchi entitylari saqlanadi
+    if (customEntities && customEntities.length > 0) {
+        const baseOffset = mentionText.length + (extraText && extraText[0] === ' ' ? 1 : 0);
+        for (const ent of customEntities) {
+            entities.push({ ...ent, offset: ent.offset + baseOffset });
+        }
+    } else if (useEmojiMap) {
+        // 3. Random_words mode — UTAG_EMOJI_MAP'dan
+        const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
+        let m;
+        while ((m = emojiRegex.exec(fullText)) !== null) {
+            const emoji = m[0];
+            let id = UTAG_EMOJI_MAP[emoji] || UTAG_EMOJI_MAP[emoji + '\uFE0F'];
+            if (id) {
+                entities.push({
+                    type: 'custom_emoji',
+                    offset: m.index,
+                    length: emoji.length,
+                    custom_emoji_id: id
+                });
+            }
+        }
+    }
+
+    entities.sort((a, b) => a.offset - b.offset);
+    return { cleanText: fullText, entities };
+}
 
 // Premium Emojilar xaritasi
 const EMOJI_MAP = {
@@ -351,16 +501,27 @@ async function sendSubscriptionAsk(bot, chatId) {
 function getMainMenu(chatId) {
     const isAdmin = config.adminId && chatId.toString() === config.adminId.toString();
     const lastRow = isAdmin 
-        ? [{ text: "👨‍💻 Admin Panel", callback_data: "admin_panel" }]
-        : [{ text: "🧾 Yordam", callback_data: "menu_help" }];
+        ? [BTN("👨‍💻 Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary })]
+        : [BTN("🧾 Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.primary })];
 
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "💎 𝗔𝘃𝘁𝗼 𝗔𝗹𝗺𝗮𝘇 ", callback_data: "menu_almaz" }, { text: "🏷 𝗔𝘃𝘁𝗼 𝗨𝘁𝗮𝗴 ", callback_data: "menu_utag" }],
-                [{ text: "👤 𝗔𝘃𝘁𝗼 𝗨𝘀𝗲𝗿 ", callback_data: "menu_avtouser" }, { text: "⚔️ 𝗔𝘃𝘁𝗼 𝗥𝗲𝘆𝗱 ", callback_data: "menu_reyd" }],
-                [{ text: "🚀 𝗔𝘃𝘁𝗼 𝗥𝗲𝗸𝗹𝗮𝗺𝗮 ", callback_data: "menu_reklama" }],
-                [{ text: "🔄 𝗥𝗮𝗾𝗮𝗺𝗻𝗶 𝗮𝗹𝗺𝗮𝘀𝗵𝘁𝗶𝗿𝗶𝘀𝗵 ", callback_data: "menu_logout" }, { text: "📊 𝗣𝗿𝗼𝗳𝗶𝗹 ", callback_data: "menu_profile" }],
+                [
+                    BTN("💎 𝗔𝘃𝘁𝗼 𝗔𝗹𝗺𝗮𝘇 ", "menu_almaz",   { iconId: BUTTON_EMOJI_IDS.almaz,   style: BUTTON_STYLES.primary }),
+                    BTN("🏷 𝗔𝘃𝘁𝗼 𝗨𝘁𝗮𝗴 ",   "menu_utag",    { iconId: BUTTON_EMOJI_IDS.utag,    style: BUTTON_STYLES.primary })
+                ],
+                [
+                    BTN("👤 𝗔𝘃𝘁𝗼 𝗨𝘀𝗲𝗿 ", "menu_avtouser",{ iconId: BUTTON_EMOJI_IDS.user,    style: BUTTON_STYLES.primary }),
+                    BTN("⚔️ 𝗔𝘃𝘁𝗼 𝗥𝗲𝘆𝗱 ", "menu_reyd",    { iconId: BUTTON_EMOJI_IDS.reyd,    style: BUTTON_STYLES.primary })
+                ],
+                [
+                    BTN("🚀 𝗔𝘃𝘁𝗼 𝗥𝗲𝗸𝗹𝗮𝗺𝗮 ", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
+                ],
+                [
+                    BTN("🔄 𝗥𝗮𝗾𝗮𝗺𝗻𝗶 𝗮𝗹𝗺𝗮𝘀𝗵𝘁𝗶𝗿𝗶𝘀𝗵 ", "menu_logout", { iconId: BUTTON_EMOJI_IDS.logout,  style: BUTTON_STYLES.danger }),
+                    BTN("📊 𝗣𝗿𝗼𝗳𝗶𝗹 ",                   "menu_profile",{ iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.primary })
+                ],
                 lastRow
             ]
         }
@@ -369,14 +530,15 @@ function getMainMenu(chatId) {
 
 // Helper: Avto Almaz Menyu
 const getAlmazMenu = (isEnabled) => {
-    const buttonText = isEnabled ? "🔴 O'chirish" : "🟢 Yoqish";
-    const buttonAction = isEnabled ? "almaz_off" : "almaz_on";
+    const onOffBtn = isEnabled
+        ? BTN("🔴 O'chirish", "almaz_off", { iconId: BUTTON_EMOJI_IDS.off, style: BUTTON_STYLES.danger })
+        : BTN("🟢 Yoqish",   "almaz_on",  { iconId: BUTTON_EMOJI_IDS.on,  style: BUTTON_STYLES.success });
 
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: buttonText, callback_data: buttonAction }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                [onOffBtn],
+                [BTN("🔙 Orqaga", "menu_back_main", { iconId: BUTTON_EMOJI_IDS.back, style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -410,10 +572,10 @@ function getUtagSetupKeyboard() {
         reply_markup: {
             inline_keyboard: [
                 [
-                    { text: '🟢 Faqat online', callback_data: 'utag_filter_online' },
-                    { text: '👥 Hammani', callback_data: 'utag_filter_all' }
+                    BTN('🟢 Faqat online', 'utag_filter_online', { iconId: BUTTON_EMOJI_IDS.on,    style: BUTTON_STYLES.success }),
+                    BTN('👥 Hammani',      'utag_filter_all',    { iconId: BUTTON_EMOJI_IDS.share, style: BUTTON_STYLES.primary })
                 ],
-                [{ text: '❌ Bekor', callback_data: 'menu_utag' }]
+                [BTN('❌ Bekor', 'menu_utag', { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]
             ]
         }
     };
@@ -423,9 +585,9 @@ function getUtagModeKeyboard() {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "👤 @ Foydalanuvchi o'zi", callback_data: 'utag_mode_only_mention' }],
-                [{ text: "💬 Tasodifiy so'zlar (bot)", callback_data: 'utag_mode_random_words' }],
-                [{ text: "✍️ O'z matnim bilan", callback_data: 'utag_mode_custom' }]
+                [BTN("👤 @ Foydalanuvchi o'zi",      'utag_mode_only_mention', { iconId: BUTTON_EMOJI_IDS.user,   style: BUTTON_STYLES.primary })],
+                [BTN("💬 Tasodifiy so'zlar (bot)", 'utag_mode_random_words', { iconId: BUTTON_EMOJI_IDS.random, style: BUTTON_STYLES.primary })],
+                [BTN("✍️ O'z matnim bilan",        'utag_mode_custom',       { iconId: BUTTON_EMOJI_IDS.custom, style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -436,15 +598,15 @@ function getUtagMenu(accountMode = 'main', rekCount = 0) {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "🚀 Yangi boshlash", callback_data: "utag_start_new" }],
-                [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "utag_change_mode" }],
+                [BTN("🚀 Yangi boshlash", "utag_start_new", { iconId: BUTTON_EMOJI_IDS.start, style: BUTTON_STYLES.success })],
+                [BTN(`⚙️ Rejim: ${modeText}`, "utag_change_mode", { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
                 [
-                    { text: `➕ Akkaunt qo'shish (${rekCount}/10)`, callback_data: "reklama_add_acc" },
-                    { text: "🗑 Tozalash", callback_data: "reklama_clear_accs" }
+                    BTN(`➕ Akkaunt qo'shish (${rekCount}/10)`, "reklama_add_acc",   { iconId: BUTTON_EMOJI_IDS.add,    style: BUTTON_STYLES.success }),
+                    BTN("🗑 Tozalash",                          "reklama_clear_accs", { iconId: BUTTON_EMOJI_IDS.remove, style: BUTTON_STYLES.danger })
                 ],
-                [{ text: "📂 Tarix", callback_data: "utag_history" }],
-                [{ text: "🗑 Tarixni tozalash", callback_data: "utag_clear_history" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                [BTN("📂 Tarix",            "utag_history",       { iconId: BUTTON_EMOJI_IDS.history, style: BUTTON_STYLES.primary })],
+                [BTN("🗑 Tarixni tozalash", "utag_clear_history", { iconId: BUTTON_EMOJI_IDS.remove,  style: BUTTON_STYLES.danger })],
+                [BTN("🔙 Orqaga",           "menu_back_main",     { iconId: BUTTON_EMOJI_IDS.back,    style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -455,11 +617,11 @@ function getReklamaMenu(accountMode = 'main', accountsCount = 0) {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "🚀 Reklama boshlash", callback_data: "reklama_start" }],
-                [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "reklama_change_mode" }],
-                [{ text: `➕ Akkaunt qo'shish (${accountsCount}/10)`, callback_data: "reklama_add_acc" }],
-                [{ text: "🗑 Akkauntlarni tozalash", callback_data: "reklama_clear_acc" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                [BTN("🚀 Reklama boshlash",                          "reklama_start",       { iconId: BUTTON_EMOJI_IDS.start,    style: BUTTON_STYLES.success })],
+                [BTN(`⚙️ Rejim: ${modeText}`,                         "reklama_change_mode", { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN(`➕ Akkaunt qo'shish (${accountsCount}/10)`,    "reklama_add_acc",     { iconId: BUTTON_EMOJI_IDS.add,      style: BUTTON_STYLES.success })],
+                [BTN("🗑 Akkauntlarni tozalash",                      "reklama_clear_acc",   { iconId: BUTTON_EMOJI_IDS.remove,   style: BUTTON_STYLES.danger })],
+                [BTN("🔙 Orqaga",                                     "menu_back_main",      { iconId: BUTTON_EMOJI_IDS.back,     style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -470,11 +632,11 @@ function getReydMenu(accountMode = 'main', accountsCount = 0) {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "🚀 Reyd boshlash", callback_data: "reyd_start" }],
-                [{ text: `⚙️ Rejim: ${modeText}`, callback_data: "reyd_change_mode" }],
-                [{ text: `➕ Akkaunt qo'shish (${accountsCount}/10)`, callback_data: "reyd_add_acc" }],
-                [{ text: "🗑 Akkauntlarni tozalash", callback_data: "reyd_clear_acc" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
+                [BTN("🚀 Reyd boshlash",                             "reyd_start",       { iconId: BUTTON_EMOJI_IDS.start,    style: BUTTON_STYLES.success })],
+                [BTN(`⚙️ Rejim: ${modeText}`,                        "reyd_change_mode", { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN(`➕ Akkaunt qo'shish (${accountsCount}/10)`,   "reyd_add_acc",     { iconId: BUTTON_EMOJI_IDS.add,      style: BUTTON_STYLES.success })],
+                [BTN("🗑 Akkauntlarni tozalash",                     "reyd_clear_acc",   { iconId: BUTTON_EMOJI_IDS.remove,   style: BUTTON_STYLES.danger })],
+                [BTN("🔙 Orqaga",                                    "menu_reyd",        { iconId: BUTTON_EMOJI_IDS.back,     style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -485,10 +647,10 @@ function getBanSpeedKeyboard() {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "🐢 Sekin (xavfsiz)", callback_data: "ban_speed_slow" }],
-                [{ text: "⚡ O'rtacha", callback_data: "ban_speed_normal" }],
-                [{ text: "🚀 Tez (xavfli)", callback_data: "ban_speed_fast" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
+                [BTN("🐢 Sekin (xavfsiz)", "ban_speed_slow",   { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN("⚡ O'rtacha",        "ban_speed_normal", { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN("🚀 Tez (xavfli)",    "ban_speed_fast",   { iconId: BUTTON_EMOJI_IDS.start,    style: BUTTON_STYLES.danger })],
+                [BTN("🔙 Orqaga",          "menu_reyd",        { iconId: BUTTON_EMOJI_IDS.back,     style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -499,10 +661,10 @@ function getBanFilterKeyboard() {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "👥 Hammani", callback_data: "ban_filter_all" }],
-                [{ text: "🟢 Onlinelarni", callback_data: "ban_filter_online" }],
-                [{ text: "🔢 Ma'lum miqdorni", callback_data: "ban_filter_count" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_reyd" }]
+                [BTN("👥 Hammani",         "ban_filter_all",    { iconId: BUTTON_EMOJI_IDS.share,    style: BUTTON_STYLES.primary })],
+                [BTN("🟢 Onlinelarni",     "ban_filter_online", { iconId: BUTTON_EMOJI_IDS.on,       style: BUTTON_STYLES.success })],
+                [BTN("🔢 Ma'lum miqdorni", "ban_filter_count",  { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN("🔙 Orqaga",          "menu_reyd",         { iconId: BUTTON_EMOJI_IDS.back,     style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -513,11 +675,20 @@ function getAdminMenu() {
     return {
         reply_markup: {
             inline_keyboard: [
-                [{ text: "📊 Statistika", callback_data: "admin_stats" }, { text: "👥 Barcha A'zolar", callback_data: "admin_all_users" }],
-                [{ text: "⏳ Kutilayotganlar", callback_data: "admin_pending" }, { text: "✅ Tasdiqlanganlar", callback_data: "admin_approved" }],
-                [{ text: "🚫 Bloklanganlar", callback_data: "admin_blocked" }, { text: "📣 Barchaga Xabar", callback_data: "admin_broadcast" }],
-                [{ text: "📢 Kanallar sozlamasi", callback_data: "admin_channels" }],
-                [{ text: "🔙 Orqaga", callback_data: "menu_back_main" }]
+                [
+                    BTN("📊 Statistika",       "admin_stats",      { iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.primary }),
+                    BTN("👥 Barcha A'zolar",  "admin_all_users",  { iconId: BUTTON_EMOJI_IDS.share,   style: BUTTON_STYLES.primary })
+                ],
+                [
+                    BTN("⏳ Kutilayotganlar", "admin_pending",    { iconId: BUTTON_EMOJI_IDS.history, style: BUTTON_STYLES.primary }),
+                    BTN("✅ Tasdiqlanganlar", "admin_approved",   { iconId: BUTTON_EMOJI_IDS.check,   style: BUTTON_STYLES.success })
+                ],
+                [
+                    BTN("🚫 Bloklanganlar",   "admin_blocked",    { iconId: BUTTON_EMOJI_IDS.block,   style: BUTTON_STYLES.danger }),
+                    BTN("📣 Barchaga Xabar",  "admin_broadcast",  { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
+                ],
+                [BTN("📢 Kanallar sozlamasi", "admin_channels",   { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN("🔙 Orqaga",             "menu_back_main",   { iconId: BUTTON_EMOJI_IDS.back,     style: BUTTON_STYLES.primary })]
             ]
         }
     };
@@ -538,9 +709,7 @@ const isUserAdmin = async (bot, chatId, userId) => {
 function getPendingPaymentKeyboard() {
     return {
         inline_keyboard: [
-            [
-                { text: "👨‍💻 Admin", url: "https://t.me/id_uzzz" }
-            ]
+            [BTN("👨‍💻 Admin", null, { url: "https://t.me/id_uzzz", iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary })]
         ]
     };
 }
@@ -643,5 +812,10 @@ module.exports = {
     BAN_CHAT_REQUEST_ID,
     isUserAdmin,
     EMOJI_MAP,
+    UTAG_EMOJI_MAP,
+    BUTTON_EMOJI_IDS,
+    BUTTON_STYLES,
+    BTN,
+    buildUtagMessage,
     reactToMessage
 };

@@ -381,7 +381,8 @@ const startExpiryChecker = () => {
                 }
             });
             for (const u of warningUsers) {
-                const warningText = `⚠️ **Diqqat!**\n\nSizning botdan foydalanish muddatingiz tugashiga **1 kun** qoldi. Botdan foydalanishni davom ettirish uchun to'lovni amalga oshiring.\n\n👨‍💼 Admin: @ortiqov_x7`;
+                const texts = require('./utils/texts');
+                const warningText = texts.payment.expiryWarning(texts.admin.username);
                 bot.sendMessage(u.chatId, warningText, { parse_mode: "Markdown", skipEmojiWrap: true });
                 await User.update({ expiryWarningSent: true }, { where: { chatId: u.chatId } });
             }
@@ -414,3 +415,20 @@ if (config.adminId) {
 }
 
 console.log(`🚀 AVTOCLICK PRO Ishga tushdi (Host: ${hostName})!`);
+
+// --- PERIODIC GC (memory tejash) ---
+// Render free planda RAM cheklangan; har 5 daqiqada heap > 300MB bo'lsa global.gc() chaqiriladi.
+// "--expose-gc" flag bilan ishga tushganda mavjud bo'ladi (package.json scripts).
+if (typeof global.gc === 'function') {
+    setInterval(() => {
+        try {
+            const heapMb = process.memoryUsage().heapUsed / 1024 / 1024;
+            if (heapMb > 300) {
+                global.gc();
+                const after = process.memoryUsage().heapUsed / 1024 / 1024;
+                console.log(`🧹 GC: ${heapMb.toFixed(1)}MB → ${after.toFixed(1)}MB`);
+            }
+        } catch (e) {}
+    }, 5 * 60 * 1000);
+    console.log('🧹 Periodic GC yoqilgan (har 5 daqiqada, heap > 300MB bo\'lsa)');
+}

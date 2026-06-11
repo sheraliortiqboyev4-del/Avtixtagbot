@@ -360,6 +360,7 @@ module.exports = (bot) => {
                 limit: utagData.limit ?? 0,
                 mode: 'custom',
                 tagText: text,
+                tagEntities: msg.entities || msg.caption_entities || [],
                 memberFilter: utagData.memberFilter || 'all',
                 groupTitle: utagData.groupTitle
             }).catch((err) => bot.sendMessage(chatId, `❌ Xatolik: ${err.message}`));

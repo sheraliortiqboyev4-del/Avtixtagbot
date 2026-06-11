@@ -71,8 +71,8 @@ const blockExpiredUser = async (user, bot, options = {}) => {
         try { await userClients[chatId].disconnect(); delete userClients[chatId]; } catch (e) {}
     }
 
-    const blockedText =
-        `⚠️ **Foydalanish muddatingiz tugadi!**\n\nBotdan foydalanishni davom ettirish uchun to'lovni amalga oshiring.\n\n👨‍💼 Admin: @id_uzzz`;
+    const texts = require('../utils/texts');
+    const blockedText = texts.payment.expired(texts.admin.username);
     bot.sendMessage(chatId, blockedText, {
         parse_mode: "Markdown",
         skipEmojiWrap: true,

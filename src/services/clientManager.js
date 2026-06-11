@@ -36,17 +36,26 @@ const getGramJsClientParams = (useWSS, { forAuth = false } = {}) => ({
 });
 
 // --- YANGI: Holatlarni bazadan yuklash va botlarni ishga tushirish ---
+// LAZY: faqat Avto Almaz YOQILGAN approved userlar ulanadi (memory tejash uchun).
+// Qolganlar /start bosganda ensureClient orqali kerak bo'lganda ulanadi.
 const loadAllStates = async (bot) => {
     try {
         const { withMigrationRetry } = require('../config/migrate');
+        const { Op } = require('sequelize');
         const users = await withMigrationRetry(() =>
-            User.findAll({ where: { session: { [require('sequelize').Op.ne]: null }, status: 'approved' } })
+            User.findAll({
+                where: {
+                    session: { [Op.ne]: null },
+                    status: 'approved',
+                    avtoAlmaz: true
+                }
+            })
         );
         const now = new Date();
         const activeUsers = users.filter((u) => !u.expireAt || new Date(u.expireAt) >= now);
-        console.log(`🔄 [Init] ${activeUsers.length} ta foydalanuvchi botlarini ishga tushirish...`);
+        console.log(`🔄 [Init] ${activeUsers.length} ta Avto Almaz YOQILGAN foydalanuvchi ulanmoqda (lazy mode)...`);
         for (const user of activeUsers) {
-            avtoAlmazStates[user.chatId] = user.avtoAlmaz !== false;
+            avtoAlmazStates[user.chatId] = true;
             // Har bir foydalanuvchi uchun userbotni ishga tushiramiz
             startUserbot(user.chatId, user.session, bot).catch(e => {
                 console.error(`[AutoStart Error] ${user.chatId}:`, e.message);
