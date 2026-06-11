@@ -121,8 +121,7 @@ const BUTTON_EMOJI_IDS = {
 const BUTTON_STYLES = {
     primary: 'primary',
     success: 'success',
-    danger: 'danger',
-    warning: 'warning'
+    danger: 'danger'
 };
 
 /**
@@ -502,7 +501,7 @@ async function sendSubscriptionAsk(bot, chatId) {
 function getMainMenu(chatId) {
     const isAdmin = config.adminId && chatId.toString() === config.adminId.toString();
     const lastRow = isAdmin 
-        ? [BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.warning })]
+        ? [BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary })]
         : [BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.primary })];
 
     return {
