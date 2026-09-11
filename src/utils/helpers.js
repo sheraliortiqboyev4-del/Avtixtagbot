@@ -502,10 +502,10 @@ function getMainMenu(chatId) {
     const isAdmin = config.adminId && chatId.toString() === config.adminId.toString();
     const lastRow = isAdmin
         ? [
-            BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary }),
-            BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.primary })
+            BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.success }),
+            BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.success })
         ]
-        : [BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.primary })];
+        : [BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.success })];
 
     return {
         reply_markup: {
@@ -514,11 +514,11 @@ function getMainMenu(chatId) {
                     BTN("Avto Utag",  "menu_utag",    { iconId: BUTTON_EMOJI_IDS.utag,    style: BUTTON_STYLES.primary })
                 ],
                 [
-                    BTN("Avto Reklama", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
+                    BTN("Avto Rek", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
                 ],
                 [
                     BTN("Profil", "menu_profile", { iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.primary }),
-                    BTN("Chiqish", "menu_logout", { iconId: BUTTON_EMOJI_IDS.logout, style: BUTTON_STYLES.danger })
+                    BTN("Logout", "menu_logout", { iconId: BUTTON_EMOJI_IDS.logout, style: BUTTON_STYLES.danger })
                 ],
                 ...(lastRow.length ? [lastRow] : [])
             ]
