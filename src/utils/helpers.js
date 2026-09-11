@@ -517,7 +517,7 @@ function getMainMenu(chatId) {
                     BTN("Avto Rek", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
                 ],
                 [
-                    BTN("Profil", "menu_profile", { iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.primary }),
+                    BTN("Profil", "menu_profile", { iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.danger }),
                     BTN("Logout", "menu_logout", { iconId: BUTTON_EMOJI_IDS.logout, style: BUTTON_STYLES.danger })
                 ],
                 ...(lastRow.length ? [lastRow] : [])
