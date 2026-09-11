@@ -22,7 +22,7 @@ const getPromoBot = () => {
     return u.startsWith('@') ? u : `@${u}`;
 };
 
-const PROMO_UTAG = () => `Uteg ${getPromoBot()} orqali yuborildi.`;
+const PROMO_UTAG = () => `Utag ${getPromoBot()} orqali yuborildi.`;
 const PROMO_REKLAMA = () => `Reklama ${getPromoBot()} orqali yuborildi`;
 
 // --- YORDAMCHI FUNKSIYALAR ---

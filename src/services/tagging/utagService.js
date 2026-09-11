@@ -8,9 +8,10 @@ const { TelegramClient, Api } = require("telegram");
 const { StringSession } = require("telegram/sessions");
 const config = require("../../config");
 const User = require("../../models/User");
-const { escapeHTML, upsertUtagHistory, normalizeUtagGroupId, getMainMenu, buildUtagMessage, convertToGramJsEntities } = require('../../utils/helpers');
+const { escapeHTML, upsertUtagHistory, normalizeUtagGroupId, getMainMenu, buildUtagMessage, convertToGramJsEntities, BTN, BUTTON_EMOJI_IDS, BUTTON_STYLES } = require('../../utils/helpers');
 const { utagStates, PROMO_UTAG } = require('../userbotState');
 const { ensureClient } = require('../clientManager');
+const { DAILY_LIMIT, getRemainingDailyUsage, incrementDailyUsage } = require('../../utils/dailyLimits');
 
 const DEFAULT_TAG_MESSAGES = [
 "Қўшилинг ўйнeли 🦦",
@@ -145,24 +146,16 @@ const fetchUtagParticipants = async (client, entity, memberFilter, limit) => {
     let participants = [];
 
     if (memberFilter === 'online') {
-        try {
-            participants = await client.getParticipants(entity, {
-                filter: new Api.ChannelParticipantsOnline({}),
-                limit: cap
-            });
-        } catch (e) {
-            console.error('[UTag] Online filter xato, fallback:', e.message);
-            const all = await client.getParticipants(entity, { limit: cap ? cap * 3 : 500 });
-            participants = all.filter((p) => {
-                const st = p.status;
-                return st && (
-                    st instanceof Api.UserStatusOnline ||
-                    st instanceof Api.UserStatusRecently ||
-                    st instanceof Api.UserStatusLastMonth
-                );
-            });
-            if (cap) participants = participants.slice(0, cap);
-        }
+        const all = await client.getParticipants(entity, { limit: cap ? cap * 3 : 500 });
+        participants = all.filter((p) => {
+            const st = p.status;
+            return st && (
+                st instanceof Api.UserStatusOnline ||
+                st instanceof Api.UserStatusRecently ||
+                st instanceof Api.UserStatusLastMonth
+            );
+        });
+        if (cap) participants = participants.slice(0, cap);
     } else {
         participants = await client.getParticipants(entity, { limit: cap });
     }
@@ -262,7 +255,14 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
             try { await clients[i].getEntity(entity).catch(() => {}); } catch (e) {}
         }
 
-        const participants = await fetchUtagParticipants(mainClient, entity, memberFilter, parseInt(limit, 10) || 0);
+        const remainingDaily = await getRemainingDailyUsage(chatId, 'utag');
+        if (remainingDaily === 0) {
+            await bot.sendMessage(chatId, `⚠️ Bugungi Utag limiti (${DAILY_LIMIT} ta) tugagan. Limit ertaga yangilanadi.`);
+            return;
+        }
+
+        const participants = (await fetchUtagParticipants(mainClient, entity, memberFilter, parseInt(limit, 10) || 0))
+            .slice(0, remainingDaily);
 
         // Multi-client warm-up: har bir qo'shimcha clientni getParticipants orqali
         // accessHash bilan to'ldiramiz, shunda text_mention link'lari ishlaydi
@@ -301,16 +301,16 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
 
         const getUtagButtons = (status) => {
             const buttons = [];
-            if (status === 'running') buttons.push({ text: "⏸ Pauza", callback_data: "utag_pause" });
-            if (status === 'paused') buttons.push({ text: "▶️ Davom etish", callback_data: "utag_resume" });
-            buttons.push({ text: "⏹ To'xtatish", callback_data: "utag_stop" });
+            if (status === 'running') buttons.push(BTN("Pauza", "utag_pause", { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
+            if (status === 'paused') buttons.push(BTN("Davom etish", "utag_resume", { iconId: BUTTON_EMOJI_IDS.play, style: BUTTON_STYLES.success }));
+            buttons.push(BTN("To'xtatish", "utag_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
             return { reply_markup: { inline_keyboard: [buttons] } };
         };
 
         const modeText = mode === 'custom' ? `Matn: "${tagText}"` : (mode === 'only_mention' ? "Faqat @" : "Bot so'zlari");
         const filterText = memberFilter === 'online' ? 'Faqat online' : (limit > 0 ? `${limit} ta odam` : 'Hammani');
         const accText = user.utagAccountMode === 'all' ? `Barcha akkauntlar (${clients.length} ta)` : "Faqat asosiy akkaunt";
-        const startText = `🚀 **Utag boshlandi**\nTo'xtatish: /s\n\nGuruh: ${groupTitle}\nTag: ${filterText}\nRejim: ${modeText}\nJami: ${participants.length} ta\nAkkaunt: ${accText}`;
+        const startText = `🚀 **Utag boshlandi**\nTo'xtatish: /s\n\nGuruh: ${groupTitle}\nTag: ${filterText}\nRejim: ${modeText}\nJami: ${participants.length} ta\nBugungi limit: ${remainingDaily}/${DAILY_LIMIT}\nAkkaunt: ${accText}`;
         
         const statusMsg = await bot.sendMessage(chatId, startText, isCommand ? {} : getUtagButtons('running')).catch(() => null);
 
@@ -347,6 +347,7 @@ const startAutoTag = async (chatId, groupLink, bot, opts = {}) => {
                 await sendUtagToParticipant(currentClient, entity, p, extraText, sendOpts, mainClient);
 
                 count++;
+                await incrementDailyUsage(chatId, 'utag');
                 utagStates[chatId].count = count;
                 
                 // Navbatdagi clientga o'tamiz (har 2 ta xabardan keyin rotatsiya)

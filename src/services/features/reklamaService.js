@@ -9,9 +9,10 @@ const { StringSession } = require("telegram/sessions");
 const config = require("../../config");
 const User = require("../../models/User");
 const PremiumAd = require("../../models/PremiumAd");
-const { convertToGramJsEntities, getMainMenu } = require('../../utils/helpers');
+const { convertToGramJsEntities, getMainMenu, BTN, BUTTON_EMOJI_IDS, BUTTON_STYLES } = require('../../utils/helpers');
 const { reklamaStates, PROMO_REKLAMA, downloadFile } = require('../userbotState');
 const { ensureClient } = require('../clientManager');
+const { DAILY_LIMIT, getRemainingDailyUsage, incrementDailyUsage } = require('../../utils/dailyLimits');
 
 const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
     const user = await User.findOne({ where: { chatId } });
@@ -21,6 +22,10 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
     const originalEntities = reklamaMsg.entities || reklamaMsg.caption_entities || [];
     const promoFooter = `\n\n${PROMO_REKLAMA()}`;
     const reklamaText = originalText ? `${originalText}${promoFooter}` : PROMO_REKLAMA();
+    const remainingDaily = await getRemainingDailyUsage(chatId, 'reklama');
+    if (remainingDaily === 0) {
+        throw new Error(`Bugungi Reklama limiti (${DAILY_LIMIT} ta yuborish) tugagan. Limit ertaga yangilanadi.`);
+    }
     
     // GramJS uchun entitylarni konvertatsiya qilish (faqat asl matn entitylari)
     const entities = convertToGramJsEntities(originalEntities);
@@ -64,7 +69,7 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
         throw new Error("Reklama uchun asosiy yoki qo'shimcha akkauntlar ulanmagan.");
     }
 
-    const users = usersList.split(/\s+/).filter(u => u.startsWith('@')).slice(0, 500);
+    const users = usersList.split(/\s+/).filter(u => u.startsWith('@')).slice(0, Math.min(500, remainingDaily));
     
     let currentSessionIndex = 0;
     let count = 0;
@@ -73,13 +78,13 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
 
     const getReklamaButtons = (status) => {
         const buttons = [];
-        if (status === 'running') buttons.push({ text: "⏸ Pauza", callback_data: "reklama_pause" });
-        if (status === 'paused') buttons.push({ text: "▶️ Davom etish", callback_data: "reklama_resume" });
-        buttons.push({ text: "⏹ To'xtatish", callback_data: "reklama_stop" });
+        if (status === 'running') buttons.push(BTN("Pauza", "reklama_pause", { iconId: BUTTON_EMOJI_IDS.pause, style: BUTTON_STYLES.primary }));
+        if (status === 'paused') buttons.push(BTN("Davom etish", "reklama_resume", { iconId: BUTTON_EMOJI_IDS.play, style: BUTTON_STYLES.success }));
+        buttons.push(BTN("To'xtatish", "reklama_stop", { iconId: BUTTON_EMOJI_IDS.stop, style: BUTTON_STYLES.danger }));
         return { reply_markup: { inline_keyboard: [buttons] } };
     };
 
-    const statusMsg = await bot.sendMessage(chatId, `🚀 **Reklama boshlandi!**\nAkkauntlar soni: ${sessions.length}\nUserlar soni: ${users.length}`, getReklamaButtons('running'));
+    const statusMsg = await bot.sendMessage(chatId, `🚀 **Reklama boshlandi!**\nAkkauntlar soni: ${sessions.length}\nUserlar soni: ${users.length}\nBugungi limit: ${remainingDaily}/${DAILY_LIMIT}`, getReklamaButtons('running'));
 
     let client = null;
     // clients array will hold connected clients
@@ -174,6 +179,7 @@ const startReklama = async (chatId, usersList, reklamaMsg, bot) => {
 
                     success = true;
                     count++;
+                    await incrementDailyUsage(chatId, 'reklama');
                     reklamaStates[chatId].count = count;
 
                     if (count % 5 === 0 || count === users.length) {

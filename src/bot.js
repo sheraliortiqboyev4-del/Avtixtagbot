@@ -88,6 +88,13 @@ const bot = new TelegramBot(config.botToken, {
     }
 });
 
+// Promo matnida .env dagi taxminiy nom emas, aynan shu tokenning username'i ishlatiladi.
+bot.getMe().then((me) => {
+    if (me.username) config.botPromoUsername = `@${me.username}`;
+}).catch((error) => {
+    console.error('Bot username aniqlanmadi:', error.message);
+});
+
 // --- WRAPPER FOR TELEGRAM BOT METHODS (ANTI-FLOOD, PREMIUM EMOJIS & ERROR PROTECTION) ---
 const baseSendMessage = bot.sendMessage.bind(bot);
 bot.sendMessage = async (chatId, text, options = {}, retryCount = 0) => {

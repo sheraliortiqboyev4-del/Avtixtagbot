@@ -70,6 +70,24 @@ const User = sequelize.define('User', {
         type: DataTypes.INTEGER,
         defaultValue: 0
     },
+    utagDailyCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    utagDailyDate: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
+    reklamaDailyCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    reklamaDailyDate: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
     utagAccountMode: {
         type: DataTypes.STRING,
         allowNull: true,

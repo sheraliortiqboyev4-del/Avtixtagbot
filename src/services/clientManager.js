@@ -9,6 +9,7 @@ const { StringSession } = require("telegram/sessions");
 const { NewMessage } = require("telegram/events");
 const config = require("../config");
 const User = require("../models/User");
+const { isApprovalRequired } = require('../utils/accessControl');
 const {
     userClients,
     avtoAlmazStates,
@@ -39,6 +40,11 @@ const getGramJsClientParams = (useWSS, { forAuth = false } = {}) => ({
 // LAZY: faqat Avto Almaz YOQILGAN approved userlar ulanadi (memory tejash uchun).
 // Qolganlar /start bosganda ensureClient orqali kerak bo'lganda ulanadi.
 const loadAllStates = async (bot) => {
+    // Avto Almaz o'chirilgan; klientlar Utag/Reklama so'ralganda lazy ulanadi.
+    console.log('🔕 [Init] Avto Almaz o\'chirilgan, avtomatik userbot ulanishi o\'tkazib yuborildi.');
+    return;
+
+    /*
     try {
         const { withMigrationRetry } = require('../config/migrate');
         const { Op } = require('sequelize');
@@ -67,6 +73,7 @@ const loadAllStates = async (bot) => {
     } catch (e) {
         console.error('loadAllStates error:', e.message);
     }
+    */
 };
 
 const startUserbot = async (chatId, sessionStr, bot) => { 
@@ -169,7 +176,8 @@ const startUserbot = async (chatId, sessionStr, bot) => {
 
                     // 2. Statusni tekshirish
                     const user = await User.findOne({ where: { chatId } });
-                    if (!user || user.status !== 'approved') return;
+                    if (!user || user.status === 'blocked') return;
+                    if (await isApprovalRequired() && user.status !== 'approved') return;
 
                     // 3. Akkaunt rejimini tekshirish (agar o'rnatilmagan bo'lsa)
                     if (!user.utagAccountMode) {

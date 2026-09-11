@@ -500,29 +500,27 @@ async function sendSubscriptionAsk(bot, chatId) {
 // Helper: Asosiy menyu (Inline)
 function getMainMenu(chatId) {
     const isAdmin = config.adminId && chatId.toString() === config.adminId.toString();
-    const lastRow = isAdmin 
-        ? [BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary })]
+    const lastRow = isAdmin
+        ? [
+            BTN("Admin Panel", "admin_panel", { iconId: BUTTON_EMOJI_IDS.admin, style: BUTTON_STYLES.primary }),
+            BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.primary })
+        ]
         : [BTN("Yordam", "menu_help", { iconId: BUTTON_EMOJI_IDS.help, style: BUTTON_STYLES.primary })];
 
     return {
         reply_markup: {
             inline_keyboard: [
                 [
-                    BTN("Avto Almaz", "menu_almaz",   { iconId: BUTTON_EMOJI_IDS.almaz,   style: BUTTON_STYLES.primary }),
                     BTN("Avto Utag",  "menu_utag",    { iconId: BUTTON_EMOJI_IDS.utag,    style: BUTTON_STYLES.primary })
-                ],
-                [
-                    BTN("Avto User", "menu_avtouser", { iconId: BUTTON_EMOJI_IDS.user,    style: BUTTON_STYLES.primary }),
-                    BTN("Avto Reyd", "menu_reyd",     { iconId: BUTTON_EMOJI_IDS.reyd,    style: BUTTON_STYLES.primary })
                 ],
                 [
                     BTN("Avto Reklama", "menu_reklama", { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
                 ],
                 [
-                    BTN("Logout", "menu_logout", { iconId: BUTTON_EMOJI_IDS.logout,  style: BUTTON_STYLES.danger }),
-                    BTN("Profil",               "menu_profile",{ iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.danger })
+                    BTN("Profil", "menu_profile", { iconId: BUTTON_EMOJI_IDS.profile, style: BUTTON_STYLES.primary }),
+                    BTN("Chiqish", "menu_logout", { iconId: BUTTON_EMOJI_IDS.logout, style: BUTTON_STYLES.danger })
                 ],
-                lastRow
+                ...(lastRow.length ? [lastRow] : [])
             ]
         }
     };
@@ -601,8 +599,8 @@ function getUtagMenu(accountMode = 'main', rekCount = 0) {
                 [BTN("Yangi boshlash",              "utag_start_new",     { iconId: BUTTON_EMOJI_IDS.start,    style: BUTTON_STYLES.primary })],
                 [BTN(`Rejim: ${modeText}`,           "utag_change_mode",   { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
                 [
-                    BTN(`Akkaunt qo'shish (${rekCount}/10)`, "reklama_add_acc",   { iconId: BUTTON_EMOJI_IDS.add,    style: BUTTON_STYLES.success }),
-                    BTN("Tozalash",                          "reklama_clear_accs", { iconId: BUTTON_EMOJI_IDS.remove, style: BUTTON_STYLES.danger })
+                    BTN(`Akkaunt qo'shish (${rekCount}/10)`, "utag_add_acc",   { iconId: BUTTON_EMOJI_IDS.add,    style: BUTTON_STYLES.success }),
+                    BTN("Tozalash",                          "utag_clear_acc", { iconId: BUTTON_EMOJI_IDS.remove, style: BUTTON_STYLES.danger })
                 ],
                 [BTN("Tarix",            "utag_history",       { iconId: BUTTON_EMOJI_IDS.history, style: BUTTON_STYLES.primary })],
                 [BTN("Tarixni tozalash", "utag_clear_history", { iconId: BUTTON_EMOJI_IDS.remove,  style: BUTTON_STYLES.danger })],
@@ -671,7 +669,9 @@ function getBanFilterKeyboard() {
 }
 
 // Helper: Admin Menyu
-function getAdminMenu() {
+function getAdminMenu(approvalRequired = true) {
+    const approvalText = approvalRequired ? "Tasdiqlash: YOQILGAN" : "Tasdiqlash: O'CHIRILGAN";
+    const approvalAction = approvalRequired ? "admin_approval_off" : "admin_approval_on";
     return {
         reply_markup: {
             inline_keyboard: [
@@ -688,6 +688,7 @@ function getAdminMenu() {
                     BTN("Barchaga Xabar",  "admin_broadcast", { iconId: BUTTON_EMOJI_IDS.reklama, style: BUTTON_STYLES.primary })
                 ],
                 [BTN("Kanallar sozlamasi", "admin_channels",  { iconId: BUTTON_EMOJI_IDS.settings, style: BUTTON_STYLES.primary })],
+                [BTN(approvalText, approvalAction, { iconId: approvalRequired ? BUTTON_EMOJI_IDS.on : BUTTON_EMOJI_IDS.off, style: approvalRequired ? BUTTON_STYLES.success : BUTTON_STYLES.danger })],
                 [BTN("Orqaga",             "menu_back_main",  { iconId: BUTTON_EMOJI_IDS.back,     style: BUTTON_STYLES.primary })]
             ]
         }

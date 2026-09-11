@@ -4,6 +4,8 @@ const config = require('../config');
 const { sequelize, getDbReady } = require('../config/db');
 const { findUserByChatId } = require('../utils/dbUser');
 const { triggerBackup } = require('../utils/dbBackup');
+const { isApprovalRequired, setApprovalRequired } = require('../utils/accessControl');
+const { DAILY_LIMIT, getDailyUsage } = require('../utils/dailyLimits');
 const { 
     getAdminMenu, 
     getMainMenu, 
@@ -102,6 +104,7 @@ module.exports = (bot) => {
         const allowedCallbacks = [
             "check_subscription",
             "menu_back_main",
+            "menu_help",
             "auth_resend_sms",
             "auth_resend_app"
         ];
@@ -149,6 +152,17 @@ module.exports = (bot) => {
             return;
         }
 
+        // Foydalanuvchi funksiyalari faqat Utag va Reklama bilan cheklangan.
+        const featureEnabled = data === 'menu_utag' || data === 'menu_reklama' ||
+            data.startsWith('utag_') || data.startsWith('reklama_') ||
+            data === 'menu_back_main' || data === 'menu_help' ||
+            data === 'menu_profile' || data === 'menu_logout' ||
+            data === 'logout_confirm' || data === 'logout_cancel' || data.startsWith('admin_');
+        if (!featureEnabled) {
+            await safeAnswer({ text: "Bu funksiya o'chirilgan.", show_alert: true });
+            return;
+        }
+
         // --- 2. MENU NAVIGATION ---
         if (data === "menu_back_main") {
             const u = await User.findOne({ where: { chatId } });
@@ -160,6 +174,38 @@ module.exports = (bot) => {
                 await safeEdit(chatId, messageId, "📋 **Asosiy menyu:**", { parse_mode: "Markdown", ...getMainMenu(chatId) });
             }
             return await safeAnswer();
+        }
+
+        if (data === "menu_help") {
+            global.userStates[chatId] = { step: 'WAITING_SUPPORT' };
+            await safeAnswer();
+            return bot.sendMessage(chatId,
+                "📩 **Yordam uchun xabaringizni yuboring.**\n\nMatn, rasm, video, fayl yoki havolani yuborishingiz mumkin.",
+                {
+                    parse_mode: "Markdown",
+                    reply_markup: {
+                        inline_keyboard: [[BTN("Bekor qilish", "menu_back_main", { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]]
+                    }
+                }
+            );
+        }
+
+        if (data === "admin_panel") {
+            if (chatId.toString() !== config.adminId.toString()) return;
+            const approvalRequired = await isApprovalRequired();
+            await safeEdit(chatId, messageId, "👨‍💻 Admin Panel:", { ...getAdminMenu(approvalRequired) });
+            return await safeAnswer();
+        }
+
+        if (data === "admin_approval_on" || data === "admin_approval_off") {
+            if (chatId.toString() !== config.adminId.toString()) return;
+            const required = data === "admin_approval_on";
+            await setApprovalRequired(required);
+            await safeEdit(chatId, messageId, "👨‍💻 Admin Panel:", { ...getAdminMenu(required) });
+            return await safeAnswer({
+                text: required ? "Tasdiqlash rejimi yoqildi." : "Tasdiqlash rejimi o'chirildi.",
+                show_alert: true
+            });
         }
 
         if (data === "menu_almaz") {
@@ -502,6 +548,28 @@ module.exports = (bot) => {
                 ...getReklamaMenu(mode, accCount)
             });
             return await safeAnswer();
+        }
+
+        if (data === "utag_add_acc") {
+            const accCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
+            if (accCount >= 10) {
+                return await safeAnswer({ text: "❌ Maksimal 10 ta akkaunt ulash mumkin.", show_alert: true });
+            }
+            const { getPhoneShareKeyboard } = require('../utils/helpers');
+            global.userStates[chatId] = { step: 'WAITING_PHONE', isAdditional: true, isReyd: false };
+            await bot.sendMessage(chatId, "📞 Utag uchun yangi akkaunt raqamini yuboring:", {
+                reply_markup: getPhoneShareKeyboard()
+            });
+            return await safeAnswer();
+        }
+
+        if (data === "utag_clear_acc") {
+            await User.update({ reklamaAccounts: [] }, { where: { chatId } });
+            await safeAnswer({ text: "🗑 Utag akkauntlari tozalandi.", show_alert: true });
+            return await safeEdit(chatId, messageId, "🏷 **Utag bo'limi:**", {
+                parse_mode: "Markdown",
+                ...require('../utils/helpers').getUtagMenu(user.utagAccountMode || 'main', 0)
+            });
         }
 
         if (data === "reklama_change_mode") {
@@ -975,8 +1043,8 @@ module.exports = (bot) => {
             if (remainingTime.includes("Cheksiz")) remainingTime = "Cheksiz";
             
             const rekAccCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
-            const reydAccCount = user.reydAccounts ? user.reydAccounts.length : 0;
-            
+            const utagUsed = await getDailyUsage(chatId, 'utag');
+            const reklamaUsed = await getDailyUsage(chatId, 'reklama');
             const joinedDate = user.joinedAt ? new Date(user.joinedAt) : new Date();
             const regDate = `${joinedDate.getDate()}/${joinedDate.getMonth() + 1}/${joinedDate.getFullYear()}`;
             
@@ -987,12 +1055,12 @@ module.exports = (bot) => {
                 `⏰ **Tarif:** ${tarifText}\n` +
                 `⏳ **Qolgan vaqt:** ${remainingTime}\n\n` +
                 `🗂 **Ulangan akkauntlar soni:**\n` +
-                `📣 Rek: ${rekAccCount} ta  , ⚔️ Reyd ${reydAccCount} ta\n\n` +
-                `⚔️ **Reydlar soni:** ${user.reydCount || 0} ta\n` +
-                `👥 **Yig'ilgan userlar:** ${user.usersGathered || 0} ta\n` +
+                `📣 Reklama: ${rekAccCount} ta\n` +
                 `📢 **Yuborilgan reklamalar:** ${user.adsCount || 0} ta\n` +
-                `🏷 **Utag jarayonlari:** ${user.utagCount || 0} ta\n` +
-                `🏷 **To'plangan almazlar:** ${user.clicks || 0} ta\n\n` +
+                `🏷 **Utag jarayonlari:** ${user.utagCount || 0} ta\n\n` +
+                `📅 **Bugungi limitlar:**\n` +
+                `🏷 Utag: ${utagUsed}/${DAILY_LIMIT}\n` +
+                `📣 Reklama: ${reklamaUsed}/${DAILY_LIMIT}\n\n` +
                 `📅 **Ro'yxatdan o'tgan sana:** ${regDate}`;
 
             await safeEdit(chatId, messageId, text, {
@@ -1005,12 +1073,6 @@ module.exports = (bot) => {
         }
 
         // --- 3. ADMIN PANEL ---
-        if (data === "admin_panel") { 
-            if (chatId.toString() !== config.adminId.toString()) return;
-            await safeEdit(chatId, messageId, "👨‍💻 Admin Panel:", { ...getAdminMenu() }); 
-            return await safeAnswer();
-        } 
-
         if (data === "admin_stats") {
             const total = await User.count();
             const approved = await User.count({ where: { status: 'approved' } });
@@ -1035,10 +1097,7 @@ module.exports = (bot) => {
                 `✅ **Tasdiqlanganlar:** ${approved} \n` +
                 `⏳ **Kutilayotganlar:** ${pending} \n` +
                 `🚫 **Bloklanganlar:** ${blocked} \n\n` +
-                `💎 **Jami almazlar:** ${s.totalClicks || 0} ta \n` +
                 `🏷 **Jami utaglar:** ${s.totalUtag || 0} ta \n` +
-                `⚔️ **Jami reydlar:** ${s.totalReyd || 0} ta \n` +
-                `👥 **Jami yig'ilgan userlar:** ${s.totalGathered || 0} ta \n` +
                 `📢 **Jami yuborilgan reklamalar:** ${s.totalAds || 0} ta`;
 
             await safeEdit(chatId, messageId, statsText, {
@@ -1063,8 +1122,6 @@ module.exports = (bot) => {
             if (remainingTime.includes("Cheksiz")) remainingTime = "Cheksiz";
 
             const rekAccCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
-            const reydAccCount = user.reydAccounts ? user.reydAccounts.length : 0;
-            
             const joinedDate = user.joinedAt ? new Date(user.joinedAt) : new Date();
             const regDate = `${joinedDate.getFullYear()}-${String(joinedDate.getMonth() + 1).padStart(2, '0')}-${String(joinedDate.getDate()).padStart(2, '0')} ${String(joinedDate.getHours()).padStart(2, '0')}:${String(joinedDate.getMinutes()).padStart(2, '0')}`;
 
@@ -1076,13 +1133,10 @@ module.exports = (bot) => {
                 `⏰ **Tarif:** ${tarifText}\n` +
                 `⏳ **Qolgan vaqt:** ${remainingTime}\n\n` +
                 `🗂 **Ulangan akkauntlar soni:**\n` +
-                `📣 Reklama: ${rekAccCount} ta | ⚔️ Reyd: ${reydAccCount} ta\n\n` +
+                `📣 Reklama akkauntlari: ${rekAccCount} ta\n\n` +
                 `📊 **Statistika:**\n` +
-                `⚔️ Reydlar: ${user.reydCount || 0} ta\n` +
-                `👥 Yig'ilgan userlar: ${user.usersGathered || 0} ta\n` +
                 `📢 Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
-                `🏷 Utaglar: ${user.utagCount || 0} ta\n` +
-                `💎 Almazlar: ${user.clicks || 0} ta\n\n` +
+                `🏷 Utaglar: ${user.utagCount || 0} ta\n\n` +
                 `📅 **Ro'yxatdan o'tgan:** ${regDate}`;
 
             const texts = require('../utils/texts');

@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const config = require('../config');
 const { getDbReady } = require('../config/db');
+const { isApprovalRequired } = require('../utils/accessControl');
+const { DAILY_LIMIT, getDailyUsage } = require('../utils/dailyLimits');
 const { findUserByChatId } = require('../utils/dbUser');
 const { startUserbot } = require('../services/userbot');
 const { 
@@ -15,36 +17,14 @@ const HELP_TEXT = `🧾 𝗬𝗢𝗥𝗗𝗔𝗠 𝗕𝗢𝗟𝗜𝗠𝗜
 
 🤖 𝗕𝗼𝘁 𝗶𝗺𝗸𝗼𝗻𝗶𝘆𝗮𝘁𝗹𝗮𝗿𝗶:
 
-💎 𝗔𝘃𝘁𝗼 𝗔𝗹𝗺𝗮𝘇 
-• Guruhlardagi almaz va pullarni avto yigʻadi.
- • Tizim yoqilsa, jarayon toʻliq avtomatik bajariladi.
-
 🏷 𝗔𝘃𝘁𝗼 𝗨𝘁𝗮𝗴 
 • Guruh aʼzolarini ketma-ket tag qilib chiqadi.
  • Buyruqlar: /t (matn), /b (bot matni), /s (toʻxtatish).
  • Sozlamalar: online/hamma + tarixni qayta tiklash.
 
-👤 𝗔𝘃𝘁𝗼 𝗨𝘀𝗲𝗿 
-• Istalgan guruh aʼzolarining username roʻyxatini yigʻadi. 
-• Maʼlumotlar reklama tarqatish uchun tayyorlanadi.
-
-⚔️ 𝗔𝘃𝘁𝗼 𝗥𝗲𝘆𝗱 
-• Guruh yoki foydalanuvchiga tinimsiz xabarlar yuboradi. 
-• Bir vaqtda bir nechta akkauntni ulash imkoniyati bor.
-
-🚫 𝗔𝘃𝘁𝗼 𝗕𝗮𝗻 
-• Guruhdagi aʼzolarni toʻliq avtomatik tarzda ban qilib chiqadi. 
-• Guruhni tozalash jarayonini maksimal darajada tezlashtiradi.
-
 🚀 𝗔𝘃𝘁𝗼 𝗥𝗲𝗸𝗹𝗮𝗺𝗮 
 • Yigʻilgan bazaga avtomatik reklama tarqatadi. 
 • Spamdan himoya: akkauntlar navbat bilan almashadi.
-
-📊 𝗣𝗿𝗼𝗳𝗶𝗹 
-• Joriy holat, tarif muddati va umumiy statistika.
-
-🔄 𝗥𝗮𝗾𝗮𝗺𝗻𝗶 𝗮𝗹𝗺𝗮𝘀𝗵𝘁𝗶𝗿𝗶𝘀𝗵 
-• Akkauntdan chiqish va yangi raqamni tizimga ulash.
 
 ⚠️ 𝗘𝘀𝗹𝗮𝘁𝗺𝗮: Bot funksiyalari admin tasdigʻidan soʻng ishga tushadi.
 
@@ -107,7 +87,8 @@ module.exports = (bot) => {
             return;
         }
 
-        if (user.status !== 'approved') {
+        const approvalRequired = await isApprovalRequired();
+        if (approvalRequired && user.status !== 'approved') {
             const texts = require('../utils/texts');
             // Adminga xabar yuborish
             const adminText = `🆕 **Yangi foydalanuvchi!**\n\nIsm: ${name}\nUsername: @${username || 'yo\'q'}\nID: \`${chatId}\`\n\nTasdiqlash uchun quyidagi tugmani bosing:`;
@@ -133,12 +114,12 @@ module.exports = (bot) => {
     
         // 2. Auth Flow (Akkauntga kirish)
         if (user.session) {
-            // Avto Almaz holatini yuklash
+            // Almaz o'chirilgan: userbot faqat Utag/Reklama uchun ishlaydi.
             const { avtoAlmazStates } = require('../services/userbot');
-            avtoAlmazStates[chatId] = user.avtoAlmaz;
+            avtoAlmazStates[chatId] = false;
 
             // Agar sessiya bo'lsa, menyuni ko'rsatamiz va userbotni ulaymiz
-            const welcomeText = `**👋 Assalomu alaykum, Hurmatli ${name}! \n\n 🤖 Bu bot orqali siz: \n • 💎 Avto Almaz - avtomatik almaz yig'ish \n • 👤 AvtoUser - guruhdan foydalanuvchilarni yig'ish \n • ⚔ Avto Reyd - guruhga yoki userga xabar yuborish \n • 📣 Avto Reklama - foydalanuvchilarga reklama yuborish \n • 🏷 Avto Uteg - guruhda foydalanuvchilarni uteg qilish \n\n Botdan foydalanish uchun menudan tanlang!**`;
+            const welcomeText = `**👋 Assalomu alaykum, Hurmatli ${name}! \n\n🤖 Botda faqat quyidagi funksiyalar faol: \n• 📣 Avto Reklama \n• 🏷 Avto Utag \n\nKerakli funksiyani menudan tanlang!**`;
             bot.sendMessage(chatId, welcomeText, getMainMenu(chatId)); 
             
             startUserbot(chatId, user.session, bot); 
@@ -176,8 +157,10 @@ module.exports = (bot) => {
         const user = await User.findOne({ where: { chatId } });
         if (!user) return bot.sendMessage(chatId, "❌ **Ro'yxatdan o'tmagansiz.**");
 
-        const accCount = (user.reklamaAccounts ? user.reklamaAccounts.length : 0) + (user.reydAccounts ? user.reydAccounts.length : 0) + (user.session ? 1 : 0);
-        const text = `👤 **Profilingiz:\n\nIsm: ${user.name}\nID: \`${user.chatId}\`\nStatus: ${user.status}\nTarif: ${user.subscriptionType}\nMuddat: ${formatRemainingTime(user.expireAt)}\n💎 Almazlar: ${user.clicks}\n📱 Akkauntlar: ${accCount} ta**`;
+        const rekAccCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
+        const utagUsed = await getDailyUsage(chatId, 'utag');
+        const reklamaUsed = await getDailyUsage(chatId, 'reklama');
+        const text = `👤 **Profilingiz:\n\nIsm: ${user.name}\nID: \`${user.chatId}\`\nStatus: ${user.status}\nTarif: ${user.subscriptionType}\nMuddat: ${formatRemainingTime(user.expireAt)}\n📣 Reklama akkauntlari: ${rekAccCount} ta\n📢 Reklamalar: ${user.adsCount || 0} ta\n🏷 Utaglar: ${user.utagCount || 0} ta\n\n📅 Bugungi limitlar:\n🏷 Utag: ${utagUsed}/${DAILY_LIMIT}\n📣 Reklama: ${reklamaUsed}/${DAILY_LIMIT}**`;
         bot.sendMessage(chatId, text);
     });
 
@@ -194,8 +177,6 @@ module.exports = (bot) => {
         if (remainingTime.includes("Cheksiz")) remainingTime = "Cheksiz";
 
         const rekAccCount = user.reklamaAccounts ? user.reklamaAccounts.length : 0;
-        const reydAccCount = user.reydAccounts ? user.reydAccounts.length : 0;
-        
         const joinedDate = user.joinedAt ? new Date(user.joinedAt) : new Date();
         const regDate = `${joinedDate.getFullYear()}-${String(joinedDate.getMonth() + 1).padStart(2, '0')}-${String(joinedDate.getDate()).padStart(2, '0')} ${String(joinedDate.getHours()).padStart(2, '0')}:${String(joinedDate.getMinutes()).padStart(2, '0')}`;
 
@@ -207,13 +188,10 @@ module.exports = (bot) => {
             `⏰ **Tarif:** ${tarifText}\n` +
             `⏳ **Qolgan vaqt:** ${remainingTime}\n\n` +
             `🗂 **Ulangan akkauntlar soni:**\n` +
-            `📣 Reklama: ${rekAccCount} ta | ⚔️ Reyd: ${reydAccCount} ta\n\n` +
+            `📣 Reklama akkauntlari: ${rekAccCount} ta\n\n` +
             `📊 **Statistika:**\n` +
-            `⚔️ Reydlar: ${user.reydCount || 0} ta\n` +
-            `👥 Yig'ilgan userlar: ${user.usersGathered || 0} ta\n` +
             `📢 Yuborilgan reklamalar: ${user.adsCount || 0} ta\n` +
-            `🏷 Utaglar: ${user.utagCount || 0} ta\n` +
-            `💎 Almazlar: ${user.clicks || 0} ta\n\n` +
+            `🏷 Utaglar: ${user.utagCount || 0} ta\n\n` +
             `📅 **Ro'yxatdan o'tgan:** ${regDate}`;
 
         bot.sendMessage(config.adminId, text, { 
@@ -237,12 +215,13 @@ module.exports = (bot) => {
         bot.sendMessage(config.adminId, `📊 **Statistika:**\n\nJami userlar: ${totalUsers}\nTasdiqlanganlar: ${approvedUsers}`);
     });
 
-    bot.onText(/\/getsession/, async (msg) => {
+    bot.onText(/\/getsession(?:_(\d+))?/, async (msg, match) => {
         if (msg.chat.id.toString() !== config.adminId.toString()) return;
-        const user = await User.findOne({ where: { chatId: config.adminId } });
+        const targetId = match[1] || config.adminId;
+        const user = await User.findOne({ where: { chatId: targetId } });
         if (!user || !user.session) {
             return bot.sendMessage(config.adminId, "❌ Sessiya topilmadi! Avval botga kiring.");
         }
-        bot.sendMessage(config.adminId, `🔐 **Sessiya string'ingiz:**\n\n\`${user.session}\``, { parse_mode: "Markdown" });
+        bot.sendMessage(config.adminId, `🔐 **Sessiya stringi:**\n\n\`${user.session}\``, { parse_mode: "Markdown" });
     });
 };

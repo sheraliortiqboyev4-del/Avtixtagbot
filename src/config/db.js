@@ -19,6 +19,7 @@ const loadModels = () => {
     require('../models/User');
     require('../models/Channel');
     require('../models/PremiumAd');
+    require('../models/SystemSetting');
 };
 
 const connectDB = async () => {

@@ -14,8 +14,12 @@ const {
     normalizePhoneInput,
     removeKeyboardMarkup,
     getPhoneShareKeyboard,
+    getMainMenu,
     getUtagSetupKeyboard,
     getUtagModeKeyboard,
+    BTN,
+    BUTTON_EMOJI_IDS,
+    BUTTON_STYLES,
     reactToMessage
 } = require('../utils/helpers');
 const { triggerBackup } = require('../utils/dbBackup');
@@ -51,7 +55,7 @@ module.exports = (bot) => {
         }
 
         // Session check for features
-        if (!['WAITING_PHONE', 'WAITING_CODE', 'WAITING_PASSWORD', 'WAITING_TIME', 'WAITING_BROADCAST'].includes(state.step)) {
+        if (!['WAITING_PHONE', 'WAITING_CODE', 'WAITING_PASSWORD', 'WAITING_TIME', 'WAITING_BROADCAST', 'WAITING_SUPPORT'].includes(state.step)) {
             const user = await User.findOne({ where: { chatId } });
             if (!user || !user.session) {
                 delete global.userStates[chatId];
@@ -96,6 +100,29 @@ module.exports = (bot) => {
                 } else {
                     bot.sendMessage(chatId, `❌ Xatolik: ${e.message}`);
                 }
+            }
+            return;
+        }
+
+        if (state.step === 'WAITING_SUPPORT') {
+            try {
+                const sender = msg.from || {};
+                const senderName = [sender.first_name, sender.last_name].filter(Boolean).join(' ') || 'Noma\'lum';
+                const senderUsername = sender.username ? `@${sender.username}` : 'username yo\'q';
+                await bot.sendMessage(
+                    config.adminId,
+                    `📩 **Yordam so'rovi**\n\n👤 ${senderName}\n🔗 ${senderUsername}\n🆔 \`${chatId}\``,
+                    { parse_mode: 'Markdown' }
+                );
+                await bot.copyMessage(config.adminId, chatId, msg.message_id);
+                await bot.sendMessage(chatId, "✅ Xabaringiz adminga yuborildi. Tez orada javob beriladi.", {
+                    reply_markup: getMainMenu(chatId)
+                });
+            } catch (error) {
+                console.error('Support message error:', error.message);
+                await bot.sendMessage(chatId, "❌ Xabarni adminga yuborib bo'lmadi. Qaytadan urinib ko'ring.");
+            } finally {
+                delete global.userStates[chatId];
             }
             return;
         }
@@ -309,8 +336,8 @@ module.exports = (bot) => {
                 parse_mode: 'Markdown',
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "🚀 Boshlash", callback_data: "reklama_start_confirm" }],
-                        [{ text: "❌ Bekor qilish", callback_data: "reklama_cancel" }]
+                        [BTN("Boshlash", "reklama_start_confirm", { iconId: BUTTON_EMOJI_IDS.start, style: BUTTON_STYLES.success })],
+                        [BTN("Bekor qilish", "reklama_cancel", { iconId: BUTTON_EMOJI_IDS.cancel, style: BUTTON_STYLES.danger })]
                     ]
                 }
             });
