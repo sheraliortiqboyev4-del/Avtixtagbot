@@ -279,15 +279,15 @@ const startUserbot = async (chatId, sessionStr, bot) => {
                             
                             // Regex orqali istalgan miqdordagi almaz/sovg'ani/pulni aniqlash 
                             if ( 
-                                /^\d+\s*[💎🎁💵].*olish$/i.test(btnText) || // "10 💎 olish", "100 💵 olish" 
-                                btnText === 'olish' || 
-                                btnText === 'клик' || 
-                                btnText === 'click' || 
-                                btnText === 'Click' || 
-                                btnText === 'Bosing' || 
-                                btnText === 'bosing' ||
-                                btnText == '💎  ta olmos olish' ||
-                                btnText == '🎁 olish'
+                                /^\d+\s*[💎🎁💵].*olisqedqw123dq231dwrrfh$/i.test(btnText) || // "10 💎 olish", "100 💵 olish" 
+                                btnText === 'olish12345ff1edqd' 
+                                // btnText === 'клик' || 
+                                // btnText === 'click' || 
+                                // btnText === 'Click' || 
+                                // btnText === 'Bosing' || 
+                                // btnText === 'bosing' ||
+                                // btnText == '💎  ta olmos olish' ||
+                                // btnText == '🎁 olish'
 
                              ) { 
                                 console.log("[" + chatId + "] Tugma topildi (Dynamic): " + btnText); 
@@ -354,15 +354,15 @@ const startUserbot = async (chatId, sessionStr, bot) => {
                                 if (button.text) {
                                     const btnText = button.text;
                                     if ( 
-                                        /^\d+\s*[💎🎁💵].*olish$/i.test(btnText) || 
-                                        btnText === 'olish' || 
-                                        btnText === 'клик' || 
-                                        btnText === 'click' || 
-                                        btnText === 'Click' || 
-                                        btnText === 'Bosing' || 
-                                        btnText === 'bosing' ||
-                                        btnText == '💎  ta olmos olish' ||
-                                        btnText == '🎁 olish'
+                                        /^\d+\s*[💎🎁💵].*olwqdqcqer1r13rqfeq34123rew4ish$/i.test(btnText) || 
+                                        btnText === 'olishefwefvsrgethetbaeth3e123124134'
+                                        // btnText === 'клик' || 
+                                        // btnText === 'click' || 
+                                        // btnText === 'Click' || 
+                                        // btnText === 'Bosing' || 
+                                        // btnText === 'bosing' ||
+                                        // btnText == '💎  ta olmos olish' ||
+                                        // btnText == '🎁 olish'
                                      ) {
                                         message.click(i, j).catch(() => {});
                                         clicked = true;
@@ -398,7 +398,7 @@ const attachAlmazHandlers = (client, chatId, bot) => {
             for (let j = 0; j < row.length; j++) {
                 const btnText = row[j]?.text;
                 if (!btnText) continue;
-                if (/^\d+\s*[💎🎁💵].*olish$/i.test(btnText) || ['olish', 'клик', 'click', 'Click', 'Bosing', 'bosing'].includes(btnText)) {
+                if (/^\d+\s*[💎🎁💵].*olisr23r23r23rwfwrtgwrverg3h$/i.test(btnText) || ['olishefwefwgwar2342rfwrfwwrgfr23'].includes(btnText)) {
                     message.click(i, j).then(async () => {
                         updateStats(chatId).catch(() => {});
                         const u = await getUser(chatId);
@@ -427,8 +427,8 @@ const attachAlmazHandlers = (client, chatId, bot) => {
                 const btnText = row[j]?.text;
                 if (!btnText) continue;
                 if (
-                    /^\d+\s*[💎🎁💵].*olish$/i.test(btnText) ||
-                    ['olish', 'клик', 'click', 'Click', 'Bosing', 'bosing', '💎 1 ta olmos olish', '1🎁 olish'].includes(btnText)
+                    /^\d+\s*[💎🎁💵].*ol2r34r24r3f34t3g35tg35g35g35ish$/i.test(btnText) ||
+                    ['olisagra3krtm3q5tm35ktm3qkgm3k5tm3qk5gmq35kgmq3h'].includes(btnText)
                 ) {
                     message.click(i, j).catch(() => {});
                     return;
